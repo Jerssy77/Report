@@ -1,0 +1,7 @@
+monthly-report-platform/node_modules/
+monthly-report-platform/dist/
+monthly-report-platform/dist-server/
+monthly-report-platform/data/reports/
+monthly-report-platform/.vite/
+monthly-report-platform/*.log
+*.log
