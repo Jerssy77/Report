@@ -47,7 +47,8 @@ async function existingFileMap(period: string) {
     files: {
       analysis: sourceFilePath(period, "analysis", prior?.files.analysis),
       brief: sourceFilePath(period, "brief", prior?.files.brief),
-      supplement: sourceFilePath(period, "supplement", prior?.files.supplement)
+      supplement: sourceFilePath(period, "supplement", prior?.files.supplement),
+      resident: sourceFilePath(period, "resident", prior?.files.resident)
     }
   };
 }
@@ -55,7 +56,7 @@ async function existingFileMap(period: string) {
 async function saveUploaded(period: string, files: Partial<Record<ReportFileKind, Express.Multer.File[]>>) {
   await ensureReportFolders(period);
   const saved: Partial<Record<ReportFileKind, string>> = {};
-  for (const kind of ["analysis", "brief", "supplement"] as ReportFileKind[]) {
+  for (const kind of ["analysis", "brief", "supplement", "resident"] as ReportFileKind[]) {
     const file = files[kind]?.[0];
     if (!file) continue;
     const target = path.join(sourceDir(period), `${kind}.xlsx`);
@@ -114,15 +115,17 @@ app.post("/api/reports/bootstrap-sample", async (_req, res, next) => {
     const month = 5;
     const analysisSample = await findWorkspaceSample("数据分析");
     const briefSample = await findWorkspaceSample("经营简报");
+    const residentSample = await findWorkspaceSample("常驻户数");
     if (!analysisSample || !briefSample) {
       return res.status(400).json({ message: "当前目录未找到 5月数据分析 或 5月经营简报 Excel。" });
     }
     await ensureReportFolders(period);
     const analysis = await copyFileIntoReport(period, analysisSample, "analysis.xlsx");
     const brief = await copyFileIntoReport(period, briefSample, "brief.xlsx");
+    const resident = residentSample ? await copyFileIntoReport(period, residentSample, "resident.xlsx") : undefined;
     const supplement = path.join(sourceDir(period), "supplement.xlsx");
     await fs.writeFile(supplement, createSupplementWorkbookBuffer());
-    const report = await buildAndPersist(period, year, month, { analysis, brief, supplement });
+    const report = await buildAndPersist(period, year, month, { analysis, brief, supplement, resident });
     res.json(report);
   } catch (error) {
     next(error);
@@ -134,7 +137,8 @@ app.post(
   upload.fields([
     { name: "analysis", maxCount: 1 },
     { name: "brief", maxCount: 1 },
-    { name: "supplement", maxCount: 1 }
+    { name: "supplement", maxCount: 1 },
+    { name: "resident", maxCount: 1 }
   ]),
   async (req, res, next) => {
     try {

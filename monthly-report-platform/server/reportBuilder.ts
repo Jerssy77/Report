@@ -3,18 +3,21 @@ import XLSX from "xlsx";
 import type {
   ClearanceRow,
   CompanyMetric,
+  EnergyCostRow,
+  EquipmentHealthRow,
   KeyCompany,
   PageCopy,
   PageId,
   Report,
   ReportPage,
+  SatisfactionScoreRow,
   SourceTrace,
   SpaceResourceRow,
   SummaryMetric,
   ValidationIssue
 } from "../shared/report.js";
 import { PAGE_ORDER, PPT_LAYOUT_MAP } from "../shared/report.js";
-import { STANDARD_COMPANY_ORDER, SUMMARY_NAMES } from "./constants.js";
+import { EXCLUDED_COMPANY_NAMES, STANDARD_COMPANY_ORDER, SUMMARY_NAMES } from "./constants.js";
 import { parseSupplementWorkbook } from "./supplement.js";
 
 type Rows = unknown[][];
@@ -27,6 +30,7 @@ interface BuildInput {
     analysis?: string;
     brief?: string;
     supplement?: string;
+    resident?: string;
   };
   priorReport?: Report | null;
 }
@@ -70,6 +74,18 @@ function pp(value: unknown): number | null {
   return Math.abs(n) <= 1.5 ? n * 100 : n;
 }
 
+function findHeaderIndex(row: unknown[], keywords: string[]) {
+  return row.findIndex((cell) => {
+    const text = str(cell);
+    return keywords.every((keyword) => text.includes(keyword));
+  });
+}
+
+function ratioChange(current: number | null, previous: number | null) {
+  if (current == null || previous == null || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
 function fmtPct(value: number | null | undefined, digits = 1) {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(digits)}%`;
@@ -78,7 +94,17 @@ function fmtPct(value: number | null | undefined, digits = 1) {
 function fmtPp(value: number | null | undefined, digits = 1) {
   if (value == null || !Number.isFinite(value)) return "—";
   const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(digits)}pp`;
+  return `${sign}${value.toFixed(digits)}%`;
+}
+
+function fmtScore(value: number | null | undefined, digits = 1) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${value.toFixed(digits)}分`;
+}
+
+function fmtAmount(value: number | null | undefined, digits = 0) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${value.toFixed(digits)}万`;
 }
 
 function sortCompanies(rows: CompanyMetric[]) {
@@ -106,6 +132,7 @@ function uniqueCompanies(rows: CompanyMetric[]) {
 function isCompanyName(company: string) {
   return Boolean(
     company &&
+    !EXCLUDED_COMPANY_NAMES.has(company) &&
     !seenNonCompanyName(company) &&
     !SUMMARY_NAMES.has(company)
   );
@@ -120,7 +147,8 @@ function seenNonCompanyName(company: string) {
     company.includes("说明") ||
     company.includes("备注") ||
     company.includes("数据") ||
-    company.includes("收入")
+    company.includes("收入") ||
+    company.includes("年")
   );
 }
 
@@ -151,6 +179,19 @@ function metric(label: string, value: string, tone: SummaryMetric["tone"] = "blu
 
 function key(label: string, row: CompanyMetric | undefined, value: string, tone: KeyCompany["tone"] = "blue"): KeyCompany {
   return { label, company: row?.company || "—", value, tone };
+}
+
+function completeCompanyMetrics(rows: CompanyMetric[]) {
+  const byCompany = new Map(uniqueCompanies(rows).map((row) => [row.company, row]));
+  return STANDARD_COMPANY_ORDER.map((company) => byCompany.get(company) || {
+    company,
+    current: null,
+    previous: null,
+    target: null,
+    delta: null,
+    amount: null,
+    secondary: null
+  });
 }
 
 function source(
@@ -351,20 +392,236 @@ function spaceData(filePath?: string) {
   return { metrics, detailRows };
 }
 
+function equipmentHealthData(filePath?: string) {
+  const allRows = workbookRows(filePath, "设备设施管理");
+  const header = allRows.find((row) => str(row[0]) === "公司" || str(row[5]) === "公司") || [];
+  const hasElevatorFault = header.some((cell) => str(cell).includes("电梯故障率"));
+  const scoreIndex = findHeaderIndex(header, ["得分"]);
+  const weightedScoreIndex = findHeaderIndex(header, ["权重得分"]);
+  const rows = allRows.filter((row) => str(row[0]) || str(row[5]));
+  const detailRows: EquipmentHealthRow[] = [];
+  let summary: EquipmentHealthRow | undefined;
+
+  for (const row of rows.slice(1)) {
+    const company = str(row[0]) || str(row[5]);
+    if (!company || company === "公司") continue;
+    const item: EquipmentHealthRow = {
+      company,
+      inspectionRate: pct(row[1]),
+      maintenanceRate: pct(row[2]),
+      onsiteFactor: hasElevatorFault ? null : num(row[3]),
+      elevatorFaultRate: hasElevatorFault ? pct(row[3]) : null,
+      score: num(row[scoreIndex >= 0 ? scoreIndex : 6]),
+      weightedScore: weightedScoreIndex >= 0 ? num(row[weightedScoreIndex]) : null
+    };
+    if (SUMMARY_NAMES.has(company)) summary = { ...item, company: "集团" };
+    else if (isCompanyName(company)) detailRows.push(item);
+  }
+
+  const uniqueRows = uniqueByCompany(detailRows);
+  const metrics = sortCompanies(
+    uniqueCompanies(
+      uniqueRows.map((row) => ({
+        company: row.company,
+        current: row.score,
+        target: 100,
+        secondary: row.weightedScore,
+        previous: row.inspectionRate,
+        delta: row.maintenanceRate,
+        amount: row.elevatorFaultRate ?? row.onsiteFactor
+      }))
+    )
+  );
+  return { metrics, detailRows: uniqueRows, summary };
+}
+
+function energyCostData(filePath?: string) {
+  const allRows = workbookRows(filePath, "自用能耗成本");
+  const header = allRows.find((row) => str(row[0]) === "公司" || str(row[8]) === "公司") || [];
+  const hasCostCompare = header.some((cell) => str(cell).includes("25年水费成本"));
+  const scoreIndex = findHeaderIndex(header, ["得分"]);
+  const weightedScoreIndex = findHeaderIndex(header, ["权重得分"]);
+  const rows = allRows.filter((row) => str(row[0]) || str(row[8]));
+  const detailRows: EnergyCostRow[] = [];
+  let summary: EnergyCostRow | undefined;
+
+  for (const row of rows.slice(header.length ? 1 : 2)) {
+    const company = str(row[0]) || str(row[8]);
+    if (!company || company === "公司") continue;
+    const totalCost25 = hasCostCompare ? num(row[5]) : null;
+    const totalCost26 = hasCostCompare ? num(row[6]) : null;
+    const item: EnergyCostRow = {
+      company,
+      income: hasCostCompare ? null : num(row[1]),
+      cost: hasCostCompare ? totalCost26 : num(row[2]),
+      waterCost25: hasCostCompare ? num(row[1]) : null,
+      waterCost26: hasCostCompare ? num(row[2]) : null,
+      electricityCost25: hasCostCompare ? num(row[3]) : null,
+      electricityCost26: hasCostCompare ? num(row[4]) : null,
+      totalCost25,
+      totalCost26,
+      costYoY: hasCostCompare ? ratioChange(totalCost26, totalCost25) : null,
+      marginRate: hasCostCompare ? null : pct(row[3]),
+      previousMarginRate: hasCostCompare ? null : pct(row[4]),
+      delta: hasCostCompare ? ratioChange(totalCost26, totalCost25) : pp(row[5]),
+      adjustment: hasCostCompare ? undefined : str(row[6]) || undefined,
+      score: num(row[scoreIndex >= 0 ? scoreIndex : 9]),
+      weightedScore: weightedScoreIndex >= 0 ? num(row[weightedScoreIndex]) : null
+    };
+    if (SUMMARY_NAMES.has(company)) summary = { ...item, company: "集团" };
+    else if (isCompanyName(company)) detailRows.push(item);
+  }
+
+  const uniqueRows = uniqueByCompany(detailRows);
+  const metrics = sortCompanies(
+    uniqueCompanies(
+      uniqueRows.map((row) => ({
+        company: row.company,
+        current: row.totalCost26 ?? row.cost,
+        previous: row.totalCost25 ?? null,
+        amount: row.waterCost26 ?? null,
+        secondary: row.electricityCost26 ?? null,
+        delta: row.delta
+      }))
+    )
+  );
+  return { metrics, detailRows: uniqueRows, summary, mode: hasCostCompare ? "cost-compare" as const : "margin" as const };
+}
+
+function scoreDistributionData(
+  filePath: string | undefined,
+  sheetName: string,
+  supplementRows: CompanyMetric[] = [],
+  residentHouseholds?: Map<string, number>
+) {
+  const allRows = workbookRows(filePath, sheetName);
+  const blocks: Array<{ title: string; rows: SatisfactionScoreRow[]; summary?: SatisfactionScoreRow }> = [];
+  const supplementMap = new Map(supplementRows.map((row) => [row.company, row]));
+
+  for (let rowIndex = 0; rowIndex < allRows.length; rowIndex += 1) {
+    const header = allRows[rowIndex];
+    for (let colIndex = 0; colIndex <= header.length - 13; colIndex += 1) {
+      if (str(header[colIndex]) !== "公司") continue;
+      if (!str(header[colIndex + 1]).includes("1")) continue;
+      if (!str(header[colIndex + 11]).includes("合计") || !str(header[colIndex + 12]).includes("满意度")) continue;
+      let title = "";
+      for (let lookup = rowIndex - 1; lookup >= 0; lookup -= 1) {
+        title = str(allRows[lookup]?.[colIndex]);
+        if (title) break;
+      }
+      const blockRows: SatisfactionScoreRow[] = [];
+      let summary: SatisfactionScoreRow | undefined;
+      for (let dataIndex = rowIndex + 1; dataIndex < allRows.length; dataIndex += 1) {
+        const sourceRow = allRows[dataIndex];
+        const company = str(sourceRow[colIndex]);
+        if (company === "公司") break;
+        if (!company) continue;
+        if (company === "投诉+报修") break;
+        const bins = Array.from({ length: 10 }, (_, index) => num(sourceRow[colIndex + 1 + index]) || 0);
+        const total = num(sourceRow[colIndex + 11]) ?? bins.reduce((sum, value) => sum + value, 0);
+        const score = num(sourceRow[colIndex + 12]);
+        const low = bins.slice(0, 6).reduce((sum, value) => sum + value, 0);
+        const high = bins.slice(6).reduce((sum, value) => sum + value, 0);
+        const denominator = total && total > 0 ? total : low + high;
+        const supplement = supplementMap.get(company);
+        const households = residentHouseholds?.get(company) ?? null;
+        const complaintRate = households && total != null ? (total / households) * 100 : null;
+        const item: SatisfactionScoreRow = {
+          company,
+          bins,
+          total,
+          score,
+          lowShare: denominator ? (low / denominator) * 100 : null,
+          highShare: denominator ? (high / denominator) * 100 : null,
+          scoreDelta: supplement?.target ?? supplement?.delta ?? null,
+          residentHouseholds: households,
+          complaintRate,
+          complaintRateDelta: supplement?.delta ?? null
+        };
+        if (SUMMARY_NAMES.has(company) || company === "总计" || company === "合计") summary = { ...item, company: "集团" };
+        else if (isCompanyName(company)) blockRows.push(item);
+      }
+      if (blockRows.length || summary) blocks.push({ title, rows: uniqueByCompany(blockRows), summary });
+    }
+  }
+
+  const selectedCandidates = blocks.filter(
+    (block) => block.title !== "投诉+报修" && block.summary?.score != null && block.rows.length >= 10
+  );
+  const fallbackCandidates = blocks.filter((block) => block.summary?.score != null);
+  const selected = selectedCandidates[selectedCandidates.length - 1] || fallbackCandidates[fallbackCandidates.length - 1];
+  const rows = selected?.rows || [];
+  const summary = selected?.summary;
+  return {
+    rows: STANDARD_COMPANY_ORDER.map((company) => rows.find((row) => row.company === company) || {
+      company,
+      bins: [],
+      total: null,
+      score: null,
+      lowShare: null,
+      highShare: null,
+      scoreDelta: supplementMap.get(company)?.target ?? supplementMap.get(company)?.delta ?? null,
+      residentHouseholds: residentHouseholds?.get(company) ?? null,
+      complaintRate: null,
+      complaintRateDelta: supplementMap.get(company)?.delta ?? null
+    }),
+    summary
+  };
+}
+
+function residentHouseholds(filePath?: string) {
+  const wbRows = workbookRows(filePath, "Sheet1");
+  const values = new Map<string, number>();
+  for (const row of wbRows.slice(1)) {
+    const company = str(row[0]);
+    const value = num(row[1]);
+    if (!company || value == null) continue;
+    if (SUMMARY_NAMES.has(company) || company === "合计" || company === "总计") values.set("集团", value);
+    else if (isCompanyName(company)) values.set(company, value);
+  }
+  return values;
+}
+
+function efficiencyData(filePath: string | undefined, sheetName: string, month: number, target: number) {
+  const rows = workbookRows(filePath, sheetName);
+  const headerIndex = rows.findIndex((row) => str(row[0]) === "公司");
+  if (headerIndex < 0) return { rows: [] as CompanyMetric[], summary: undefined as CompanyMetric | undefined };
+  const monthIndex = Math.min(Math.max(month, 1), 12);
+  const detailRows: CompanyMetric[] = [];
+  let summary: CompanyMetric | undefined;
+  for (const row of rows.slice(headerIndex + 1)) {
+    const company = str(row[0]);
+    if (!company) continue;
+    const current = pct(row[monthIndex]) ?? pct(row[13]) ?? pct(row[16]);
+    const previous = pct(row[1]);
+    const item: CompanyMetric = {
+      company,
+      current,
+      previous,
+      target,
+      delta: current != null && previous != null ? current - previous : null
+    };
+    if (SUMMARY_NAMES.has(company) || company === "总计" || company === "合计") summary = { ...item, company: "集团" };
+    else if (isCompanyName(company)) detailRows.push(item);
+  }
+  return { rows: sortCompanies(uniqueCompanies(detailRows)), summary };
+}
+
 function generatedBullets(page: ReportPage) {
   const max = topBy(page.companies, (row) => row.current);
   const min = bottomBy(page.companies, (row) => row.current);
   const improved = topBy(page.companies, (row) => row.delta);
   const summary = page.metrics[0]?.value || "—";
-  const target = page.metrics[2]?.value || "—";
+  const targetMetric = page.metrics.find((item) => item.label.includes("目标"));
+  const targetPhrase = targetMetric ? `，目标完成${targetMetric.value || "—"}` : "";
   return [
-    `${page.title}核心指标为${summary}，目标完成${target}，需持续关注低于集团均值或目标进度的公司。`,
+    `${page.title}核心指标为${summary}${targetPhrase}，需持续关注低于集团均值或目标进度的公司。`,
     `${max?.company || "—"}表现领先，${min?.company || "—"}处于低位；${improved?.company || "—"}改善最明显。`
   ];
 }
 
 function copyFromPage(page: ReportPage): PageCopy {
-  const bullets = generatedBullets(page);
+  const bullets = page.bullets.length ? page.bullets : generatedBullets(page);
   return {
     mainConclusion: bullets[0],
     keyCompanies: page.keyCompanies.map((item) => `${item.label}：${item.company} ${item.value}`).join("；"),
@@ -375,10 +632,23 @@ function copyFromPage(page: ReportPage): PageCopy {
   };
 }
 
+function mentionsExcludedCompany(copy: PageCopy) {
+  const text = [copy.mainConclusion, copy.keyCompanies, copy.reason, copy.note].join("\n");
+  return Array.from(EXCLUDED_COMPANY_NAMES).some((company) => text.includes(company));
+}
+
+function copyNeedsRefresh(page: ReportPage, copy: PageCopy) {
+  const text = [copy.mainConclusion, copy.keyCompanies, copy.reason, copy.note].join("\n");
+  const hasTargetMetric = page.metrics.some((item) => item.label.includes("目标"));
+  if (page.id === "repair" || page.id === "complaints" || page.id === "efficiency") return true;
+  return mentionsExcludedCompany(copy) || (!hasTargetMetric && text.includes("目标完成"));
+}
+
 function mergeCopy(pages: ReportPage[], prior?: Report | null): Record<PageId, PageCopy> {
   const copy = {} as Record<PageId, PageCopy>;
   for (const page of pages) {
-    copy[page.id] = prior?.copy?.[page.id] || copyFromPage(page);
+    const existing = prior?.copy?.[page.id];
+    copy[page.id] = existing && !copyNeedsRefresh(page, existing) ? existing : copyFromPage(page);
   }
   return copy;
 }
@@ -444,6 +714,31 @@ export function buildReport(input: BuildInput): Report {
     current.companies.reduce((sum, row) => sum + (targets.get(row.company) || 0), 0) /
     Math.max(current.companies.filter((row) => targets.has(row.company)).length, 1);
   const supplement = parseSupplementWorkbook(input.files.supplement);
+  const chargingRows = completeCompanyMetrics(supplement.charging.rows);
+  const residentMap = residentHouseholds(input.files.resident);
+  const repairScoreSource = scoreDistributionData(input.files.analysis, "入户维修", supplement.repair);
+  const complaintScoreSource = scoreDistributionData(input.files.analysis, "投诉评分", supplement.complaints, residentMap);
+  const repairRows = completeCompanyMetrics(
+    repairScoreSource.rows.map((row) => ({
+      company: row.company,
+      current: row.score ?? null,
+      delta: row.scoreDelta ?? null,
+      secondary: row.highShare ?? null,
+      target: row.lowShare ?? null,
+      amount: row.total ?? null
+    }))
+  );
+  const complaintRows = completeCompanyMetrics(
+    complaintScoreSource.rows.map((row) => ({
+      company: row.company,
+      current: row.complaintRate ?? null,
+      previous: row.residentHouseholds ?? null,
+      amount: row.total ?? null,
+      delta: row.complaintRateDelta ?? null,
+      secondary: row.score ?? null,
+      target: row.scoreDelta ?? null
+    }))
+  );
 
   const pages: ReportPage[] = [];
   const currentMax = topBy(current.companies, (row) => row.current);
@@ -615,10 +910,123 @@ export function buildReport(input: BuildInput): Report {
   );
   sources.push(source("src-space", "space", "空间资源", "brief", input.files.brief, "空间资源", "A3:O21"));
 
+  const equipmentSource = equipmentHealthData(input.files.analysis);
+  const equipment = equipmentSource.metrics;
+  const equipmentTotal = equipmentSource.detailRows.length;
+  const equipmentValid = equipmentSource.detailRows.filter(
+    (row) => row.inspectionRate != null || row.maintenanceRate != null || row.onsiteFactor != null || row.elevatorFaultRate != null
+  ).length;
+  const equipmentScore = equipmentSource.summary?.score ?? avg(equipment, "current");
+  const equipmentInspection = equipmentSource.summary?.inspectionRate ?? avg(equipment, "previous");
+  const equipmentMaintenance = equipmentSource.summary?.maintenanceRate ?? avg(equipment, "delta");
+  const equipmentFault = equipmentSource.summary?.elevatorFaultRate ?? avg(equipment, "amount");
+  const equipmentTop = topBy(equipment, (row) => row.current);
+  const equipmentLow = bottomBy(equipment, (row) => row.current);
+  const equipmentWeakest = [
+    { label: "巡检完成率", value: equipmentInspection },
+    { label: "维保完成率", value: equipmentMaintenance },
+    { label: "电梯故障率", value: equipmentFault }
+  ]
+    .filter((item): item is { label: string; value: number } => typeof item.value === "number")
+    .sort((left, right) => left.value - right.value)[0];
+  pages.push(
+    makePage({
+      id: "equipment-health",
+      order: 7,
+      title: `${input.year}年${input.month}月运营回顾`,
+      subtitle: "设施设备健康度",
+      chartTitle: "设施设备健康度得分与构成",
+      kind: "score-table",
+      metrics: [
+        metric("集团健康度得分", fmtScore(equipmentScore), Number(equipmentScore || 0) >= 100 ? "green" : Number(equipmentScore || 0) > 0 ? "blue" : "red"),
+        metric("巡检完成率", fmtPct(equipmentInspection), Number(equipmentInspection || 0) >= 90 ? "green" : "blue"),
+        metric("维保完成率", fmtPct(equipmentMaintenance), Number(equipmentMaintenance || 0) >= 90 ? "green" : "red"),
+        metric("电梯故障率", fmtPct(equipmentFault), Number(equipmentFault || 0) >= 95 ? "green" : "blue")
+      ],
+      keyCompanies: [
+        key("得分最高", equipmentTop, fmtScore(equipmentTop?.current), "blue"),
+        key("得分最低", equipmentLow, fmtScore(equipmentLow?.current), "red"),
+        key("主要短板", { company: equipmentWeakest?.label || "—", current: equipmentWeakest?.value ?? null }, fmtPct(equipmentWeakest?.value), "red")
+      ],
+      companies: equipment,
+      data: { equipmentRows: equipmentSource.detailRows },
+      bullets: [
+        `${input.year}年${input.month}月设施设备健康度集团得分${fmtScore(equipmentScore)}，巡检完成率${fmtPct(equipmentInspection)}、维保完成率${fmtPct(equipmentMaintenance)}、电梯故障率${fmtPct(equipmentFault)}。`,
+        `${equipmentWeakest?.label || "维保完成率"}为当前主要短板，右侧明细按巡检、维保、电梯故障率和健康度得分展示。`
+      ],
+      sourceIds: sourceForPage("equipment-health")
+    })
+  );
+  sources.push(source("src-equipment-health", "equipment-health", "设施设备健康度", "analysis", input.files.analysis, "设备设施管理", "A1:G16"));
+  if (equipmentTotal > 0 && equipmentValid < equipmentTotal) {
+    validation.push({
+      id: "equipment-health-missing-detail",
+      severity: "warning",
+      pageId: "equipment-health",
+      message: `设施设备健康度有${equipmentTotal - equipmentValid}家公司缺少巡检/维保/电梯故障率明细，已按--展示。`
+    });
+  }
+
+  const energySource = energyCostData(input.files.analysis);
+  const energy = energySource.metrics;
+  const energyDetailMissing = energySource.detailRows.filter(
+    (row) => row.totalCost25 == null && row.totalCost26 == null && row.income == null && row.cost == null
+  ).length;
+  const energySum = (selector: (row: EnergyCostRow) => number | null | undefined) => {
+    const values = energySource.detailRows
+      .map(selector)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    return values.length ? values.reduce((total, value) => total + value, 0) : null;
+  };
+  const energyTotalCost25 = energySource.summary?.totalCost25 ?? energySum((row) => row.totalCost25);
+  const energyTotalCost26 = energySource.summary?.totalCost26 ?? energySum((row) => row.totalCost26);
+  const energyWaterCost26 = energySource.summary?.waterCost26 ?? energySum((row) => row.waterCost26);
+  const energyElectricityCost26 = energySource.summary?.electricityCost26 ?? energySum((row) => row.electricityCost26);
+  const energyCostYoY = energySource.summary?.costYoY ?? ratioChange(energyTotalCost26, energyTotalCost25);
+  const energyCostTop = topBy(energy, (row) => row.current);
+  const energyYoYTop = topBy(energy, (row) => row.delta);
+  pages.push(
+    makePage({
+      id: "energy-cost",
+      order: 8,
+      title: `${input.year}年${input.month}月运营回顾`,
+      subtitle: "自用能耗成本管控",
+      chartTitle: "自用能耗成本排名与同比变化",
+      kind: "score-table",
+      metrics: [
+        metric("26年合计成本", fmtAmount(energyTotalCost26), "blue"),
+        metric("合计成本同比", fmtPp(energyCostYoY), Number(energyCostYoY || 0) <= 0 ? "green" : "red"),
+        metric("26年水费成本", fmtAmount(energyWaterCost26), "blue"),
+        metric("26年电费成本", fmtAmount(energyElectricityCost26), "blue")
+      ],
+      keyCompanies: [
+        key("合计成本最高", energyCostTop, fmtAmount(energyCostTop?.current), "red"),
+        key("同比升幅最高", energyYoYTop, fmtPp(energyYoYTop?.delta), "red"),
+        key("成本同比", { company: "集团", current: energyCostYoY }, fmtPp(energyCostYoY), Number(energyCostYoY || 0) <= 0 ? "green" : "red")
+      ],
+      companies: energy,
+      data: { energyRows: energySource.detailRows, energyCostMode: energySource.mode },
+      bullets: [
+        `${input.year}年${input.month}月自用能耗26年合计成本${fmtAmount(energyTotalCost26)}，同比变化${fmtPp(energyCostYoY)}。`,
+        `本页按26年合计成本和同比升幅排序，便于识别高成本与成本上升压力公司。`
+      ],
+      sourceIds: sourceForPage("energy-cost")
+    })
+  );
+  sources.push(source("src-energy-cost", "energy-cost", "自用能耗成本管控", "analysis", input.files.analysis, "自用能耗成本", "A2:K16"));
+  if (energyDetailMissing > 0) {
+    validation.push({
+      id: "energy-cost-missing-detail",
+      severity: "warning",
+      pageId: "energy-cost",
+      message: `自用能耗成本有${energyDetailMissing}家公司缺少25/26年水费、电费或合计成本明细，成本排名按--展示。`
+    });
+  }
+
   pages.push(
     makePage({
       id: "charging",
-      order: 7,
+      order: 9,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "充电桩",
       chartTitle: "充电桩收入与利润情况",
@@ -629,63 +1037,123 @@ export function buildReport(input: BuildInput): Report {
         metric("利润率", fmtPct(supplement.charging.summary.profitRate), "green")
       ],
       keyCompanies: [
-        key("利润最高", topBy(supplement.charging.rows, (row) => row.current), fmtPct(topBy(supplement.charging.rows, (row) => row.current)?.current), "blue"),
-        key("自营最高", topBy(supplement.charging.rows, (row) => row.secondary), fmtPct(topBy(supplement.charging.rows, (row) => row.secondary)?.secondary), "green"),
-        key("增长最高", topBy(supplement.charging.rows, (row) => row.delta), fmtPp(topBy(supplement.charging.rows, (row) => row.delta)?.delta), "green")
+        key("利润最高", topBy(chargingRows, (row) => row.current), fmtPct(topBy(chargingRows, (row) => row.current)?.current), "blue"),
+        key("自营最高", topBy(chargingRows, (row) => row.secondary), fmtPct(topBy(chargingRows, (row) => row.secondary)?.secondary), "green"),
+        key("增长最高", topBy(chargingRows, (row) => row.delta), fmtPp(topBy(chargingRows, (row) => row.delta)?.delta), "green")
       ],
-      companies: supplement.charging.rows,
+      companies: chargingRows,
       sourceIds: sourceForPage("charging")
     })
   );
   sources.push(source("src-charging", "charging", "充电桩", "supplement", input.files.supplement, "充电桩", "A2:E20"));
 
+  const repairSummary = repairScoreSource.summary;
+  const repairHighShare = repairSummary?.highShare ?? avg(repairRows, "secondary");
+  const repairLowShare = repairSummary?.lowShare ?? avg(repairRows, "target");
   pages.push(
     makePage({
       id: "repair",
-      order: 8,
+      order: 10,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "入户维修满意度",
       chartTitle: "入户维修满意度与响应及时率",
       kind: "quadrant",
       metrics: [
-        metric("集团满意度", fmtPct(avg(supplement.repair, "current")), "blue"),
-        metric("同比", fmtPp(avg(supplement.repair, "delta")), Number(avg(supplement.repair, "delta") || 0) >= 0 ? "green" : "red"),
-        metric("响应及时率", fmtPct(avg(supplement.repair, "secondary")), "blue")
+        metric("集团满意度", fmtScore(repairSummary?.score ?? avg(repairRows, "current")), "blue"),
+        metric("7-10分占比", fmtPct(repairHighShare), "green"),
+        metric("1-6分占比", fmtPct(repairLowShare), Number(repairLowShare || 0) > 5 ? "red" : "blue")
       ],
       keyCompanies: [
-        key("满意度最高", topBy(supplement.repair, (row) => row.current), fmtPct(topBy(supplement.repair, (row) => row.current)?.current), "blue"),
-        key("响应最低", bottomBy(supplement.repair, (row) => row.secondary), fmtPct(bottomBy(supplement.repair, (row) => row.secondary)?.secondary), "red"),
-        key("改善最大", topBy(supplement.repair, (row) => row.delta), fmtPp(topBy(supplement.repair, (row) => row.delta)?.delta), "green")
+        key("满意度最高", topBy(repairRows, (row) => row.current), fmtScore(topBy(repairRows, (row) => row.current)?.current), "blue"),
+        key("满意度最低", bottomBy(repairRows, (row) => row.current), fmtScore(bottomBy(repairRows, (row) => row.current)?.current), "red"),
+        key("低分占比最高", topBy(repairRows, (row) => row.target), fmtPct(topBy(repairRows, (row) => row.target)?.target), "red")
       ],
-      companies: supplement.repair,
+      companies: repairRows,
+      data: { satisfactionRows: repairScoreSource.rows },
+      bullets: [
+        `${input.year}年${input.month}月入户维修集团满意度${fmtScore(repairSummary?.score ?? avg(repairRows, "current"))}，7-10分占比${fmtPct(repairHighShare)}，1-6分占比${fmtPct(repairLowShare)}。`,
+        `满意度最高为${topBy(repairRows, (row) => row.current)?.company || "--"}，最低为${bottomBy(repairRows, (row) => row.current)?.company || "--"}，需重点关注低分占比较高公司。`
+      ],
       sourceIds: sourceForPage("repair")
     })
   );
-  sources.push(source("src-repair", "repair", "入户维修满意度", "supplement", input.files.supplement, "入户维修", "A2:D20"));
+  sources.push(source("src-repair", "repair", "入户维修满意度", "analysis", input.files.analysis, "入户维修", "A114:M128"));
 
+  const complaintSummary = complaintScoreSource.summary;
+  const complaintTotal = complaintSummary?.total ?? sum(complaintRows, "amount");
+  const residentTotal = residentMap.get("集团") ?? sum(complaintRows, "previous");
+  const complaintGroupRate = residentTotal ? (complaintTotal / residentTotal) * 100 : avg(complaintRows, "current");
+  const complaintHighShare =
+    complaintSummary?.highShare ??
+    (() => {
+      const values = complaintScoreSource.rows
+        .map((row) => row.highShare)
+        .filter((value): value is number => typeof value === "number");
+      return values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
+    })();
   pages.push(
     makePage({
       id: "complaints",
-      order: 9,
+      order: 11,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "投诉管理",
       chartTitle: "投诉率与投诉处理满意度",
       kind: "dual-table",
       metrics: [
-        metric("集团投诉率", fmtPct(avg(supplement.complaints, "current")), "blue"),
-        metric("投诉率同比", fmtPp(avg(supplement.complaints, "delta")), Number(avg(supplement.complaints, "delta") || 0) <= 0 ? "green" : "red"),
-        metric("处理满意度", fmtPct(avg(supplement.complaints, "secondary")), "blue")
+        metric("集团投诉率", fmtPct(complaintGroupRate), "blue", residentTotal ? `${Math.round(complaintTotal)} / ${Math.round(residentTotal)}户` : undefined),
+        metric("投诉率同比", fmtPp(avg(complaintRows, "delta")), Number(avg(complaintRows, "delta") || 0) <= 0 ? "green" : "red"),
+        metric("处理满意度", fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary")), "blue"),
+        metric("7-10分占比", fmtPct(complaintHighShare), "green")
       ],
       keyCompanies: [
-        key("投诉率最高", topBy(supplement.complaints, (row) => row.current), fmtPct(topBy(supplement.complaints, (row) => row.current)?.current), "red"),
-        key("满意度最低", bottomBy(supplement.complaints, (row) => row.secondary), fmtPct(bottomBy(supplement.complaints, (row) => row.secondary)?.secondary), "red"),
-        key("满意度提升", topBy(supplement.complaints, (row) => row.target), fmtPp(topBy(supplement.complaints, (row) => row.target)?.target), "green")
+        key("投诉率最高", topBy(complaintRows, (row) => row.current), fmtPct(topBy(complaintRows, (row) => row.current)?.current), "red"),
+        key("满意度最低", bottomBy(complaintRows, (row) => row.secondary), fmtScore(bottomBy(complaintRows, (row) => row.secondary)?.secondary), "red"),
+        key("低分占比最高", {
+          company: [...complaintScoreSource.rows].sort((left, right) => Number(right.lowShare || 0) - Number(left.lowShare || 0))[0]?.company || "--",
+          current: [...complaintScoreSource.rows].sort((left, right) => Number(right.lowShare || 0) - Number(left.lowShare || 0))[0]?.lowShare ?? null
+        }, fmtPct([...complaintScoreSource.rows].sort((left, right) => Number(right.lowShare || 0) - Number(left.lowShare || 0))[0]?.lowShare), "red")
       ],
-      companies: supplement.complaints,
+      companies: complaintRows,
+      data: { satisfactionRows: complaintScoreSource.rows },
       sourceIds: sourceForPage("complaints")
     })
   );
-  sources.push(source("src-complaints", "complaints", "投诉管理", "supplement", input.files.supplement, "投诉管理", "A2:E20"));
+  sources.push(source("src-complaints", "complaints", "投诉管理", "analysis", input.files.analysis, "投诉评分", "A98:M112"));
+  if (input.files.resident) {
+    sources.push(source("src-complaints-resident", "complaints", "常驻户数", "resident", input.files.resident, "Sheet1", "A1:B15"));
+  }
+
+  const baseInfo = efficiencyData(input.files.analysis, "基础信息抽查", input.month, 95);
+  const awareness400 = efficiencyData(input.files.analysis, "400知晓率", input.month, 50);
+  pages.push(
+    makePage({
+      id: "efficiency",
+      order: 12,
+      title: `${input.year}年${input.month}月运营回顾`,
+      subtitle: "效率管理",
+      chartTitle: "基础信息维护与400知晓率",
+      kind: "efficiency",
+      metrics: [
+        metric("基础信息准确率", fmtPct(baseInfo.summary?.current ?? avg(baseInfo.rows, "current")), Number(baseInfo.summary?.current || 0) >= 95 ? "green" : "blue", "指标95%"),
+        metric("基础信息同比", fmtPp(baseInfo.summary?.delta ?? avg(baseInfo.rows, "delta")), Number(baseInfo.summary?.delta || 0) >= 0 ? "green" : "red"),
+        metric("400知晓率", fmtPct(awareness400.summary?.current ?? avg(awareness400.rows, "current")), Number(awareness400.summary?.current || 0) >= 50 ? "green" : "red", "指标50%"),
+        metric("400同比", fmtPp(awareness400.summary?.delta ?? avg(awareness400.rows, "delta")), Number(awareness400.summary?.delta || 0) >= 0 ? "green" : "red")
+      ],
+      keyCompanies: [
+        key("基础信息最低", bottomBy(baseInfo.rows, (row) => row.current), fmtPct(bottomBy(baseInfo.rows, (row) => row.current)?.current), "red"),
+        key("400知晓率最低", bottomBy(awareness400.rows, (row) => row.current), fmtPct(bottomBy(awareness400.rows, (row) => row.current)?.current), "red"),
+        key("400提升最大", topBy(awareness400.rows, (row) => row.delta), fmtPp(topBy(awareness400.rows, (row) => row.delta)?.delta), "green")
+      ],
+      companies: baseInfo.rows,
+      secondaryCompanies: awareness400.rows,
+      bullets: [
+        `基础信息准确率当前为${fmtPct(baseInfo.summary?.current ?? avg(baseInfo.rows, "current"))}，对照95%指标线识别低于标准公司。`,
+        `400知晓率当前为${fmtPct(awareness400.summary?.current ?? avg(awareness400.rows, "current"))}，对照50%指标线跟踪同比变化和后段公司。`
+      ],
+      sourceIds: sourceForPage("efficiency")
+    })
+  );
+  sources.push(source("src-efficiency", "efficiency", "效率管理", "analysis", input.files.analysis, "基础信息抽查 / 400知晓率", "A1:S16"));
 
   for (const pageInfo of PAGE_ORDER) {
     const page = pages.find((item) => item.id === pageInfo.id);
@@ -708,7 +1176,8 @@ export function buildReport(input: BuildInput): Report {
     files: {
       analysis: input.files.analysis ? path.basename(input.files.analysis) : undefined,
       brief: input.files.brief ? path.basename(input.files.brief) : undefined,
-      supplement: input.files.supplement ? path.basename(input.files.supplement) : undefined
+      supplement: input.files.supplement ? path.basename(input.files.supplement) : undefined,
+      resident: input.files.resident ? path.basename(input.files.resident) : undefined
     },
     pages: pages.sort((a, b) => a.order - b.order),
     copy: mergeCopy(pages, input.priorReport),
