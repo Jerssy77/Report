@@ -22,7 +22,8 @@ import {
   listReports,
   regenerateCopy,
   saveCopy,
-  uploadReport
+  uploadReport,
+  assetUrl
 } from "./api";
 import { SlideCanvas } from "./components/SlideCanvas";
 
@@ -195,7 +196,7 @@ export default function App() {
     <div className="app-shell">
       <header className="dashboard-header">
         <div className="dashboard-brand">
-          <img src="/brand-logo.png" alt="世纪金源服务" />
+          <img src={assetUrl("/brand-logo.png")} alt="世纪金源服务" />
           <div>
             <strong>月度运营驾驶舱</strong>
             <span>{report ? `${report.year}年${report.month}月经营月报` : "等待导入经营数据"}</span>
@@ -443,7 +444,7 @@ function UploadPanel({
           载入样例
         </button>
       </div>
-      <a className="template-link" href="/api/templates/supplement.xlsx">
+      <a className="template-link" href={assetUrl("/api/templates/supplement.xlsx")}>
         下载补充数据模板
       </a>
     </div>
@@ -592,8 +593,8 @@ function ExportList({ report }: { report: Report }) {
         <>
           <span>{latest.id}</span>
           <div className="export-links">
-            <a href={`/api/reports/${report.period}/exports/${latest.id}/pdf`}>下载 PDF</a>
-            <a href={`/api/reports/${report.period}/exports/${latest.id}/pptx`}>下载 PPTX</a>
+            <a href={assetUrl(`/api/reports/${report.period}/exports/${latest.id}/pdf`)}>下载 PDF</a>
+            <a href={assetUrl(`/api/reports/${report.period}/exports/${latest.id}/pptx`)}>下载 PPTX</a>
           </div>
         </>
       ) : (

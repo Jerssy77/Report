@@ -17,6 +17,14 @@ function exportId() {
 }
 
 async function launchBrowser() {
+  if (process.env.BROWSER_EXECUTABLE_PATH) {
+    return chromium.launch({
+      executablePath: process.env.BROWSER_EXECUTABLE_PATH,
+      headless: true,
+      args: ["--no-sandbox", "--disable-dev-shm-usage"]
+    });
+  }
+
   const channels = [process.env.BROWSER_CHANNEL, "msedge", "chrome"].filter(Boolean) as string[];
   let lastError: unknown;
   for (const channel of channels) {

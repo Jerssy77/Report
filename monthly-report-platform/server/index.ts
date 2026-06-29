@@ -23,6 +23,19 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
+
+const publicBasePath = (process.env.PUBLIC_BASE_PATH || "").replace(/\/$/, "");
+if (publicBasePath) {
+  app.use((req, _res, next) => {
+    if (req.url === publicBasePath) {
+      req.url = "/";
+    } else if (req.url.startsWith(`${publicBasePath}/`)) {
+      req.url = req.url.slice(publicBasePath.length);
+    }
+    next();
+  });
+}
+
 app.use("/files", express.static(DATA_ROOT));
 
 const upload = multer({ dest: path.join(DATA_ROOT, "tmp", "uploads") });
