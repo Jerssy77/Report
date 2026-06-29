@@ -357,23 +357,28 @@ function PageTabs({
   onPick: (pageId: PageId) => void;
   disabled: boolean;
 }) {
+  const currentIndex = Math.max(0, pages.findIndex((page) => page.id === selectedPageId));
   return (
-    <nav className="page-tabs" aria-label="月报页面">
-      {pages.map((page, index) => (
-        <button
-          key={page.id}
-          className={selectedPageId === page.id ? "page-tab active" : "page-tab"}
-          onClick={() => onPick(page.id)}
-          disabled={disabled}
-        >
-          <span>{String(index + 1).padStart(2, "0")}</span>
-          {page.subtitle}
-        </button>
-      ))}
-    </nav>
+    <div className="page-tabs-wrap">
+      <nav className="page-tabs" aria-label={"\u6708\u62a5\u9875\u9762"}>
+        {pages.map((page, index) => (
+          <button
+            key={page.id}
+            className={selectedPageId === page.id ? "page-tab active" : "page-tab"}
+            onClick={() => onPick(page.id)}
+            disabled={disabled}
+          >
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            {page.subtitle}
+          </button>
+        ))}
+      </nav>
+      <div className="page-count">
+        {"\u5171"} {pages.length} {"\u9875"} · {"\u5f53\u524d\u7b2c"} {currentIndex + 1} {"\u9875"}
+      </div>
+    </div>
   );
 }
-
 function InsightLines({
   copyDraft,
   selectedPage

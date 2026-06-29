@@ -5,7 +5,7 @@ export function pct(value: number | null | undefined, digits = 1) {
 
 export function pp(value: number | null | undefined, digits = 1) {
   if (value == null || Number.isNaN(value)) return "—";
-  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}pp`;
+  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
 }
 
 export function numberText(value: number | null | undefined, digits = 0) {

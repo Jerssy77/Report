@@ -125,8 +125,8 @@ function VerticalBarChart({
   const highest = Math.max(scaleFloor, target || 0, averageValue || 0, ...numericValues);
   const max = Math.min(MAX_BAR, Math.ceil(highest / 20) * 20);
   const ticks = Array.from({ length: Math.floor(max / 20) + 1 }, (_, index) => max - index * 20);
-  const averageTop = averageValue == null ? undefined : `${100 - (clampPercent(averageValue, max) / max) * 100}%`;
-  const targetTop = target == null ? undefined : `${100 - (clampPercent(target, max) / max) * 100}%`;
+  const averageTop = undefined;
+  const targetTop = undefined;
   const declineSet = declineBottomCompanies(chartRows, (row) => row.current, (row) => row.delta);
 
   return (
@@ -149,15 +149,15 @@ function VerticalBarChart({
         <div className="ppt-bar-groups" style={{ gridTemplateColumns: `repeat(${chartRows.length}, minmax(0, 1fr))` }}>
           {chartRows.map((row, index) => (
             <div className={`ppt-bar-group ${riskClass(row, target, invertDelta)} ${index < 3 ? "leader" : ""} ${declineBottomClass(row.company, declineSet)}`} key={row.company}>
-              <div className="ppt-value-pair single">
-                <span>{pct(row.current)}</span>
-              </div>
               <div className="ppt-bar-pair">
                 <b className="prev" style={{ height: `${(clampPercent(row.previous, max) / max) * 100}%` }} />
                 <b className="current" style={{ height: `${(clampPercent(row.current, max) / max) * 100}%` }} />
               </div>
               <strong>{row.company}</strong>
-              <em className={deltaClass(row.delta, invertDelta)}>{pp(row.delta)}</em>
+              <div className="ppt-bar-bottom">
+                <span>{pct(row.current)}</span>
+                <em className={deltaClass(row.delta, invertDelta)}>{pp(row.delta)}</em>
+              </div>
             </div>
           ))}
         </div>
@@ -1067,7 +1067,7 @@ function ComplaintsSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
   const complaintAverage = average(page.companies, "current") ?? 0;
   const complaintDeltaAverage = average(page.companies, "delta") ?? 0;
   const satisfactionAverage = average(page.companies, "secondary") ?? 0;
-  const complaintMax = Math.max(30, Math.ceil(Math.max(...rows.map((row) => Number(row.current || 0)), complaintAverage) / 5) * 5);
+  const complaintMax = Math.max(5, Math.ceil(Math.max(...rows.map((row) => Number(row.current || 0)), complaintAverage)));
   const satisfactionBottomSet = new Set([...rows].sort((left, right) => numeric(left.secondary) - numeric(right.secondary)).slice(0, 3).map((row) => row.company));
   const satisfactionRows = page.data?.satisfactionRows || [];
   const tableRows = [
