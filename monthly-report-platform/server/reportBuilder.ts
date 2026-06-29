@@ -223,6 +223,16 @@ function sourceForPage(pageId: PageId) {
   return [`src-${pageId}`];
 }
 
+function scoreBlockRange(month: number) {
+  const pairIndex = Math.floor((Math.min(Math.max(month, 1), 12) - 1) / 2);
+  const titleRow = 20 + pairIndex * 18;
+  const headerRow = titleRow + 1;
+  const endRow = headerRow + 15;
+  const startCol = month % 2 === 1 ? "A" : "Q";
+  const endCol = month % 2 === 1 ? "M" : "AC";
+  return `${startCol}${headerRow}:${endCol}${endRow}`;
+}
+
 function rowsFromOverall(filePath?: string) {
   const rows = workbookRows(filePath, "整体").slice(5);
   return rows.filter((row) => str(row[0]));
@@ -1097,7 +1107,7 @@ export function buildReport(input: BuildInput): Report {
       sourceIds: sourceForPage("repair")
     })
   );
-  sources.push(source("src-repair", "repair", "入户维修满意度", "analysis", input.files.analysis, "入户维修", "A114:M128"));
+  sources.push(source("src-repair", "repair", "入户维修满意度", "analysis", input.files.analysis, "入户维修", scoreBlockRange(input.month)));
 
   const complaintSummary = complaintScoreSource.summary;
   const complaintTotal = complaintSummary?.total ?? sum(complaintRows, "amount");
