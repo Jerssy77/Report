@@ -22,8 +22,7 @@ export const STANDARD_COMPANY_ORDER = [
   "宁波",
   "腾冲",
   "版纳",
-  "阜阳",
-  "广州"
+  "阜阳"
 ];
 
 export const SUMMARY_NAMES = new Set(["小计", "合计", "集团", "总计"]);
@@ -34,5 +33,6 @@ export const EXCLUDED_COMPANY_NAMES = new Set<string>([
   "备注",
   "数据来源",
   "收入",
-  "全年预估收入"
+  "全年预估收入",
+  "广州"
 ]);

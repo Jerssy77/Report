@@ -86,6 +86,10 @@ function ratioChange(current: number | null, previous: number | null) {
   return ((current - previous) / previous) * 100;
 }
 
+function yuanToWan(value: number | null | undefined) {
+  return value == null ? null : value / 10000;
+}
+
 function fmtPct(value: number | null | undefined, digits = 1) {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(digits)}%`;
@@ -438,32 +442,43 @@ function equipmentHealthData(filePath?: string) {
 function energyCostData(filePath?: string) {
   const allRows = workbookRows(filePath, "自用能耗成本");
   const header = allRows.find((row) => str(row[0]) === "公司" || str(row[8]) === "公司") || [];
-  const hasCostCompare = header.some((cell) => str(cell).includes("25年水费成本"));
+  const companyIndex = findHeaderIndex(header, ["公司"]);
+  const waterCost26Index = findHeaderIndex(header, ["水费成本"]);
+  const waterCost25Index = findHeaderIndex(header, ["25", "水费成本"]);
+  const electricityCost26Index = findHeaderIndex(header, ["电费成本"]);
+  const electricityCost25Index = findHeaderIndex(header, ["25", "电费成本"]);
+  const totalCost26Index = findHeaderIndex(header, ["合计成本"]);
+  const totalCost25Index = findHeaderIndex(header, ["25", "合计成本"]);
+  const costYoYIndex = findHeaderIndex(header, ["较25年变化率"]);
+  const hasCostCompare = waterCost25Index >= 0 && totalCost25Index >= 0;
   const scoreIndex = findHeaderIndex(header, ["得分"]);
   const weightedScoreIndex = findHeaderIndex(header, ["权重得分"]);
-  const rows = allRows.filter((row) => str(row[0]) || str(row[8]));
+  const rows = allRows.filter((row) => str(row[companyIndex >= 0 ? companyIndex : 0]) || str(row[8]));
   const detailRows: EnergyCostRow[] = [];
   let summary: EnergyCostRow | undefined;
 
   for (const row of rows.slice(header.length ? 1 : 2)) {
-    const company = str(row[0]) || str(row[8]);
+    const company = str(row[companyIndex >= 0 ? companyIndex : 0]) || str(row[8]);
     if (!company || company === "公司") continue;
-    const totalCost25 = hasCostCompare ? num(row[5]) : null;
-    const totalCost26 = hasCostCompare ? num(row[6]) : null;
+    const totalCost25Raw = hasCostCompare ? num(row[totalCost25Index]) : null;
+    const totalCost26Raw = hasCostCompare ? num(row[totalCost26Index]) : null;
+    const totalCost25 = yuanToWan(totalCost25Raw);
+    const totalCost26 = yuanToWan(totalCost26Raw);
+    const costYoY = hasCostCompare ? pp(row[costYoYIndex]) ?? ratioChange(totalCost26Raw, totalCost25Raw) : null;
     const item: EnergyCostRow = {
       company,
       income: hasCostCompare ? null : num(row[1]),
       cost: hasCostCompare ? totalCost26 : num(row[2]),
-      waterCost25: hasCostCompare ? num(row[1]) : null,
-      waterCost26: hasCostCompare ? num(row[2]) : null,
-      electricityCost25: hasCostCompare ? num(row[3]) : null,
-      electricityCost26: hasCostCompare ? num(row[4]) : null,
+      waterCost25: hasCostCompare ? yuanToWan(num(row[waterCost25Index])) : null,
+      waterCost26: hasCostCompare ? yuanToWan(num(row[waterCost26Index])) : null,
+      electricityCost25: hasCostCompare ? yuanToWan(num(row[electricityCost25Index])) : null,
+      electricityCost26: hasCostCompare ? yuanToWan(num(row[electricityCost26Index])) : null,
       totalCost25,
       totalCost26,
-      costYoY: hasCostCompare ? ratioChange(totalCost26, totalCost25) : null,
+      costYoY,
       marginRate: hasCostCompare ? null : pct(row[3]),
       previousMarginRate: hasCostCompare ? null : pct(row[4]),
-      delta: hasCostCompare ? ratioChange(totalCost26, totalCost25) : pp(row[5]),
+      delta: hasCostCompare ? costYoY : pp(row[5]),
       adjustment: hasCostCompare ? undefined : str(row[6]) || undefined,
       score: num(row[scoreIndex >= 0 ? scoreIndex : 9]),
       weightedScore: weightedScoreIndex >= 0 ? num(row[weightedScoreIndex]) : null
@@ -492,7 +507,8 @@ function scoreDistributionData(
   filePath: string | undefined,
   sheetName: string,
   supplementRows: CompanyMetric[] = [],
-  residentHouseholds?: Map<string, number>
+  residentHouseholds?: Map<string, number>,
+  preferredTitle?: string
 ) {
   const allRows = workbookRows(filePath, sheetName);
   const blocks: Array<{ title: string; rows: SatisfactionScoreRow[]; summary?: SatisfactionScoreRow }> = [];
@@ -549,7 +565,11 @@ function scoreDistributionData(
     (block) => block.title !== "投诉+报修" && block.summary?.score != null && block.rows.length >= 10
   );
   const fallbackCandidates = blocks.filter((block) => block.summary?.score != null);
-  const selected = selectedCandidates[selectedCandidates.length - 1] || fallbackCandidates[fallbackCandidates.length - 1];
+  const preferred = preferredTitle
+    ? selectedCandidates.find((block) => block.title === preferredTitle) ||
+      fallbackCandidates.find((block) => block.title === preferredTitle)
+    : undefined;
+  const selected = preferred || selectedCandidates[selectedCandidates.length - 1] || fallbackCandidates[fallbackCandidates.length - 1];
   const rows = selected?.rows || [];
   const summary = selected?.summary;
   return {
@@ -716,7 +736,7 @@ export function buildReport(input: BuildInput): Report {
   const supplement = parseSupplementWorkbook(input.files.supplement);
   const chargingRows = completeCompanyMetrics(supplement.charging.rows);
   const residentMap = residentHouseholds(input.files.resident);
-  const repairScoreSource = scoreDistributionData(input.files.analysis, "入户维修", supplement.repair);
+  const repairScoreSource = scoreDistributionData(input.files.analysis, "入户维修", supplement.repair, undefined, `${input.month}月`);
   const complaintScoreSource = scoreDistributionData(input.files.analysis, "投诉评分", supplement.complaints, residentMap);
   const repairRows = completeCompanyMetrics(
     repairScoreSource.rows.map((row) => ({
