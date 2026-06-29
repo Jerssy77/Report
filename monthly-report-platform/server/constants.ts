@@ -27,3 +27,12 @@ export const STANDARD_COMPANY_ORDER = [
 ];
 
 export const SUMMARY_NAMES = new Set(["小计", "合计", "集团", "总计"]);
+
+export const EXCLUDED_COMPANY_NAMES = new Set<string>([
+  "公司",
+  "说明",
+  "备注",
+  "数据来源",
+  "收入",
+  "全年预估收入"
+]);
