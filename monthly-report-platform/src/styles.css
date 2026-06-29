@@ -638,8 +638,8 @@ button:disabled {
 
 .report-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -680,7 +680,7 @@ button:disabled {
   justify-content: center;
   align-items: flex-start;
   overflow: auto;
-  padding: 18px;
+  padding: 12px;
   background: #e8eef5;
   border: 1px solid #dbe4ee;
   border-radius: 8px;
@@ -1396,7 +1396,8 @@ button:disabled {
   align-items: end;
   justify-content: space-between;
   color: #6b7480;
-  font-size: 0.72cqw;
+  font-size: 0.8cqw;
+  line-height: 1.15;
 }
 
 /* PPT-following slide system */
@@ -1482,7 +1483,7 @@ button:disabled {
   gap: 0.7cqw;
   width: 100%;
   color: #1d2937;
-  font-size: 1.06cqw;
+  font-size: 1.12cqw;
   font-weight: 800;
 }
 
@@ -1500,7 +1501,7 @@ button:disabled {
 }
 
 .ppt-summary-piece em {
-  font-size: 0.72cqw;
+  font-size: 0.8cqw;
   font-style: normal;
   font-weight: 900;
 }
@@ -1758,7 +1759,7 @@ button:disabled {
   justify-content: flex-end;
   gap: 1.05cqw;
   color: #425166;
-  font-size: 0.74cqw;
+  font-size: 0.84cqw;
   font-weight: 850;
 }
 
@@ -1788,7 +1789,7 @@ button:disabled {
   bottom: 3.1cqw;
   width: 3.2cqw;
   color: #596575;
-  font-size: 0.68cqw;
+  font-size: 0.78cqw;
 }
 
 .ppt-y-axis span {
@@ -1852,7 +1853,7 @@ button:disabled {
 .ppt-bar-group {
   min-width: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 1.12cqw 1.65cqw;
+  grid-template-rows: minmax(0, 1fr) 1.18cqw 1.82cqw;
   gap: 0.18cqw;
   align-items: end;
   justify-items: center;
@@ -1914,7 +1915,7 @@ button:disabled {
 .ppt-bar-group strong,
 .ppt-bar-group em {
   max-width: 100%;
-  font-size: 0.78cqw;
+  font-size: 0.86cqw;
   line-height: 1;
   white-space: nowrap;
 }
@@ -1942,7 +1943,7 @@ button:disabled {
 .ppt-bar-bottom span,
 .ppt-bar-bottom em {
   max-width: 100%;
-  font-size: 0.7cqw;
+  font-size: 0.78cqw;
   line-height: 1;
   font-weight: 900;
   white-space: nowrap;
@@ -1970,7 +1971,7 @@ button:disabled {
 
 .ppt-insight span {
   color: #111927;
-  font-size: 0.95cqw;
+  font-size: 1.05cqw;
   line-height: 1;
   font-weight: 900;
 }
@@ -1981,8 +1982,8 @@ button:disabled {
 
 .ppt-insight p {
   margin: 0;
-  font-size: 0.98cqw;
-  line-height: 1.36;
+  font-size: 1.06cqw;
+  line-height: 1.38;
   font-weight: 650;
 }
 
@@ -2038,18 +2039,18 @@ button:disabled {
 
 .clearance-summary-strip span {
   color: #344054;
-  font-size: 0.72cqw;
+  font-size: 0.78cqw;
   font-weight: 900;
 }
 
 .clearance-summary-strip strong {
   color: #07539e;
-  font-size: 1.16cqw;
+  font-size: 1.22cqw;
   font-weight: 900;
 }
 
 .clearance-operating-table {
-  font-size: 0.72cqw;
+  font-size: 0.78cqw;
   border-top: 1px solid #dce4ec;
 }
 
@@ -2068,9 +2069,9 @@ button:disabled {
 
 .inline-rate-bar {
   position: relative;
-  height: 1cqw;
+  height: 1.08cqw;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 3.2cqw;
+  grid-template-columns: minmax(0, 1fr) 3.45cqw;
   align-items: center;
   gap: 0.42cqw;
 }
@@ -2079,7 +2080,7 @@ button:disabled {
   content: "";
   position: absolute;
   left: 0;
-  right: 3.62cqw;
+  right: 3.86cqw;
   top: 50%;
   height: 0.58cqw;
   background: #e8eef5;
@@ -2097,7 +2098,7 @@ button:disabled {
 .inline-rate-bar strong {
   justify-self: end;
   color: #1d2937;
-  font-size: 0.68cqw;
+  font-size: 0.74cqw;
   font-weight: 900;
 }
 
@@ -2132,7 +2133,7 @@ button:disabled {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 0.68cqw;
+  font-size: 0.74cqw;
 }
 
 .ppt-table th {
@@ -2144,7 +2145,7 @@ button:disabled {
 .ppt-table th,
 .ppt-table td {
   border-bottom: 1px solid #dfe7ef;
-  padding: 0.28cqw 0.22cqw;
+  padding: 0.26cqw 0.2cqw;
   text-align: center;
   white-space: nowrap;
 }
@@ -2174,11 +2175,11 @@ button:disabled {
 
 .ppt-rate-row {
   display: grid;
-  grid-template-columns: 3.45cqw minmax(0, 1fr) 3.6cqw 3.3cqw;
+  grid-template-columns: 3.55cqw minmax(0, 1fr) 3.8cqw 3.45cqw;
   align-items: center;
   gap: 0.38cqw;
-  min-height: 0.98cqw;
-  font-size: 0.7cqw;
+  min-height: 1.05cqw;
+  font-size: 0.78cqw;
 }
 
 .ppt-rate-row span {
@@ -2205,7 +2206,7 @@ button:disabled {
 
 .ppt-rate-row strong,
 .ppt-rate-row em {
-  font-size: 0.66cqw;
+  font-size: 0.74cqw;
   font-style: normal;
   font-weight: 900;
   white-space: nowrap;
@@ -2261,13 +2262,13 @@ button:disabled {
 }
 
 .space-year-item span {
-  font-size: 0.68cqw;
+  font-size: 0.76cqw;
   font-weight: 900;
 }
 
 .space-year-item strong {
   color: #5a6470;
-  font-size: 1cqw;
+  font-size: 1.08cqw;
   line-height: 1;
 }
 
@@ -2291,8 +2292,8 @@ button:disabled {
 .space-stack-card {
   min-height: 0;
   display: grid;
-  grid-template-columns: 1.7cqw minmax(0, 1fr);
-  grid-template-rows: 0.8cqw minmax(0, 1fr);
+  grid-template-columns: 1.9cqw minmax(0, 1fr);
+  grid-template-rows: 1.05cqw minmax(0, 1fr);
   column-gap: 0.35cqw;
   overflow: hidden;
 }
@@ -2312,9 +2313,9 @@ button:disabled {
 .space-legend {
   display: flex;
   align-items: center;
-  gap: 0.85cqw;
+  gap: 0.72cqw;
   color: #536274;
-  font-size: 0.55cqw;
+  font-size: 0.76cqw;
   font-weight: 850;
 }
 
@@ -2325,8 +2326,8 @@ button:disabled {
 }
 
 .space-legend i {
-  width: 0.58cqw;
-  height: 0.58cqw;
+  width: 0.72cqw;
+  height: 0.72cqw;
   display: inline-block;
 }
 
@@ -2343,14 +2344,14 @@ button:disabled {
   align-self: center;
   justify-self: center;
   color: #334155;
-  font-size: 0.82cqw;
+  font-size: 0.9cqw;
 }
 
 .space-axis {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   color: #5b6675;
-  font-size: 0.45cqw;
+  font-size: 0.9cqw;
 }
 
 .space-axis span {
@@ -2359,16 +2360,16 @@ button:disabled {
 
 .space-stack-list {
   display: grid;
-  gap: 0.16cqw;
+  gap: 0.12cqw;
   min-height: 0;
 }
 
 .space-stack-row {
   display: grid;
-  grid-template-columns: 2.9cqw minmax(0, 1fr) 3.4cqw 3.2cqw;
+  grid-template-columns: 3.2cqw minmax(0, 1fr) 3.7cqw 3.5cqw;
   align-items: center;
   gap: 0.25cqw;
-  font-size: 0.48cqw;
+  font-size: 0.82cqw;
 }
 
 .space-stack-row > span {
@@ -2377,7 +2378,7 @@ button:disabled {
 }
 
 .space-stack-track {
-  height: 0.58cqw;
+  height: 0.66cqw;
   display: flex;
   background: #f4dfcf;
   overflow: hidden;
@@ -2388,8 +2389,8 @@ button:disabled {
   min-width: 0;
   height: 100%;
   color: #fff;
-  font-size: 0.38cqw;
-  line-height: 0.58cqw;
+  font-size: 0.78cqw;
+  line-height: 0.64cqw;
   text-align: center;
   font-weight: 800;
   white-space: nowrap;
@@ -2415,7 +2416,7 @@ button:disabled {
 .space-stack-row strong,
 .space-stack-row em {
   color: #e87923;
-  font-size: 0.45cqw;
+  font-size: 0.82cqw;
   font-weight: 900;
   text-align: right;
   white-space: nowrap;
@@ -2459,7 +2460,7 @@ button:disabled {
 .space-stack-card.single .space-axis {
   padding-left: 4.1cqw;
   padding-right: 3.7cqw;
-  font-size: 0.58cqw;
+  font-size: 0.9cqw;
 }
 
 .space-stack-card.single .space-stack-list {
@@ -2469,7 +2470,7 @@ button:disabled {
 .space-stack-card.single .space-stack-row {
   grid-template-columns: 3.9cqw minmax(0, 1fr) 3.8cqw 3.8cqw;
   gap: 0.42cqw;
-  font-size: 0.68cqw;
+  font-size: 0.86cqw;
 }
 
 .space-stack-card.single .space-stack-track {
@@ -2477,13 +2478,13 @@ button:disabled {
 }
 
 .space-stack-card.single .space-stack-track b {
-  font-size: 0.58cqw;
+  font-size: 0.78cqw;
   line-height: 0.9cqw;
 }
 
 .space-stack-card.single .space-stack-row strong,
 .space-stack-card.single .space-stack-row em {
-  font-size: 0.64cqw;
+  font-size: 0.84cqw;
 }
 
 .kpi-strip {
@@ -2655,7 +2656,7 @@ button:disabled {
 
 .equipment-score-head {
   color: #536274;
-  font-size: 0.58cqw;
+  font-size: 0.64cqw;
   font-weight: 900;
 }
 
@@ -2663,13 +2664,13 @@ button:disabled {
   grid-column: 2 / 4;
   justify-self: end;
   color: #07539e;
-  font-size: 0.78cqw;
+  font-size: 0.84cqw;
 }
 
 .equipment-score-axis {
   grid-template-columns: 3.15cqw repeat(6, 1fr) 3.2cqw;
   color: #8a95a3;
-  font-size: 0.5cqw;
+  font-size: 0.56cqw;
   font-weight: 850;
 }
 
@@ -2687,7 +2688,7 @@ button:disabled {
 
 .equipment-score-row {
   color: #111927;
-  font-size: 0.68cqw;
+  font-size: 0.74cqw;
 }
 
 .equipment-score-row > span,
@@ -2720,7 +2721,7 @@ button:disabled {
 
 .equipment-score-row strong {
   color: #0b3f87;
-  font-size: 0.72cqw;
+  font-size: 0.78cqw;
   font-weight: 900;
   text-align: right;
 }
@@ -2735,7 +2736,7 @@ button:disabled {
   align-items: center;
   gap: 0.72cqw;
   color: #111927;
-  font-size: 0.62cqw;
+  font-size: 0.68cqw;
   font-weight: 900;
 }
 
@@ -2761,12 +2762,12 @@ button:disabled {
   align-items: center;
   gap: 0.42cqw;
   color: #111927;
-  font-size: 0.68cqw;
+  font-size: 0.74cqw;
 }
 
 .equipment-defect-row > strong {
   color: #111927;
-  font-size: 0.72cqw;
+  font-size: 0.78cqw;
   font-weight: 900;
   text-align: right;
 }
@@ -2784,7 +2785,7 @@ button:disabled {
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 0.58cqw;
+  font-size: 0.64cqw;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -2932,7 +2933,7 @@ button:disabled {
 .equipment-summary-card span,
 .energy-summary-card span {
   color: #536274;
-  font-size: 0.58cqw;
+  font-size: 0.82cqw;
   font-weight: 900;
 }
 
@@ -2941,7 +2942,7 @@ button:disabled {
   min-width: 0;
   overflow: hidden;
   color: #07539e;
-  font-size: 1.05cqw;
+  font-size: 1.12cqw;
   line-height: 1;
   font-weight: 900;
   text-overflow: ellipsis;
@@ -2964,7 +2965,7 @@ button:disabled {
   min-width: 0;
   overflow: hidden;
   color: #657386;
-  font-size: 0.52cqw;
+  font-size: 1cqw;
   font-style: normal;
   font-weight: 850;
   text-overflow: ellipsis;
@@ -3027,7 +3028,7 @@ button:disabled {
 .metric-heat-cell strong {
   position: relative;
   z-index: 1;
-  font-size: 0.58cqw;
+  font-size: 0.64cqw;
   font-weight: 900;
 }
 
@@ -3056,7 +3057,7 @@ button:disabled {
 
 .score-rank-head {
   color: #758294;
-  font-size: 0.54cqw;
+  font-size: 0.6cqw;
   font-weight: 900;
 }
 
@@ -3069,7 +3070,7 @@ button:disabled {
 .score-rank-row {
   min-height: 0.9cqw;
   color: #17212f;
-  font-size: 0.68cqw;
+  font-size: 0.74cqw;
 }
 
 .score-rank-row > span {
@@ -3081,7 +3082,7 @@ button:disabled {
   display: grid;
   gap: 0.08cqw;
   color: #0b5f9f;
-  font-size: 0.64cqw;
+  font-size: 0.7cqw;
   line-height: 1.05;
   font-weight: 900;
   text-align: right;
@@ -3090,7 +3091,7 @@ button:disabled {
 
 .score-rank-row > strong em {
   color: #758294;
-  font-size: 0.5cqw;
+  font-size: 0.56cqw;
   font-style: normal;
   font-weight: 850;
 }
@@ -3132,12 +3133,12 @@ button:disabled {
 }
 
 .score-table {
-  font-size: 0.62cqw;
+  font-size: 0.68cqw;
 }
 
 .score-table th,
 .score-table td {
-  padding: 0.24cqw 0.18cqw;
+  padding: 0.22cqw 0.16cqw;
 }
 
 .score-table td:first-child,
@@ -3151,13 +3152,13 @@ button:disabled {
 }
 
 .energy-table {
-  font-size: 0.47cqw;
+  font-size: 0.56cqw;
 }
 
 .energy-table th,
 .energy-table td {
-  padding: 0.11cqw 0.1cqw;
-  line-height: 1.05;
+  padding: 0.1cqw 0.08cqw;
+  line-height: 1.08;
 }
 
 .energy-table th:first-child,
@@ -3239,8 +3240,8 @@ button:disabled {
   min-height: 0;
   height: calc(100% - 1.45cqw);
   display: grid;
-  grid-template-rows: 0.85cqw 0.75cqw minmax(0, 1fr);
-  gap: 0.24cqw;
+  grid-template-rows: 1.05cqw 0.95cqw minmax(0, 1fr);
+  gap: 0.18cqw;
 }
 
 .cost-chart.empty {
@@ -3251,9 +3252,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 1cqw;
+  gap: 0.8cqw;
   color: #536274;
-  font-size: 0.52cqw;
+  font-size: 0.82cqw;
   font-weight: 900;
 }
 
@@ -3264,8 +3265,8 @@ button:disabled {
 }
 
 .cost-chart-legend i {
-  width: 0.56cqw;
-  height: 0.56cqw;
+  width: 0.64cqw;
+  height: 0.64cqw;
   display: inline-block;
 }
 
@@ -3275,7 +3276,7 @@ button:disabled {
 .cost-chart-legend strong {
   margin-left: auto;
   color: #111927;
-  font-size: 0.58cqw;
+  font-size: 0.7cqw;
 }
 
 .cost-axis {
@@ -3284,7 +3285,7 @@ button:disabled {
   padding-left: 3.2cqw;
   padding-right: 5.7cqw;
   color: #758294;
-  font-size: 0.48cqw;
+  font-size: 0.9cqw;
   font-weight: 850;
 }
 
@@ -3301,7 +3302,7 @@ button:disabled {
   min-height: 0;
   display: grid;
   grid-template-rows: repeat(13, minmax(0, 1fr));
-  gap: 0.15cqw;
+  gap: 0.1cqw;
 }
 
 .cost-chart-plot.muted .cost-chart-track {
@@ -3321,11 +3322,11 @@ button:disabled {
 
 .cost-chart-row {
   display: grid;
-  grid-template-columns: 3.1cqw minmax(0, 1fr) 3cqw;
+  grid-template-columns: 3.25cqw minmax(0, 1fr) 3.45cqw;
   align-items: center;
-  gap: 0.35cqw;
+  gap: 0.3cqw;
   color: #17212f;
-  font-size: 0.58cqw;
+  font-size: 0.72cqw;
 }
 
 .cost-chart-row > span,
@@ -3337,7 +3338,7 @@ button:disabled {
 .cost-chart-track,
 .cost-yoy-track {
   position: relative;
-  height: 0.58cqw;
+  height: 0.66cqw;
   background: #eef3f8;
   border: 1px solid #dce6ef;
   overflow: hidden;
@@ -3353,7 +3354,7 @@ button:disabled {
 
 .cost-stack-chart .cost-chart-track {
   display: flex;
-  height: 0.8cqw;
+  height: 0.98cqw;
 }
 
 .cost-stack-chart .cost-chart-track i,
@@ -3363,7 +3364,7 @@ button:disabled {
   place-items: center;
   min-width: 0;
   color: #fff;
-  font-size: 0.58cqw;
+  font-size: 0.82cqw;
   font-style: normal;
   font-weight: 900;
 }
@@ -3390,7 +3391,7 @@ button:disabled {
 .cost-chart-row strong,
 .cost-chart-row em,
 .cost-yoy-row strong {
-  font-size: 0.56cqw;
+  font-size: 0.78cqw;
   font-style: normal;
   font-weight: 900;
   text-align: right;
@@ -3398,7 +3399,7 @@ button:disabled {
 }
 
 .cost-chart.yoy {
-  grid-template-rows: 0.9cqw minmax(0, 1fr);
+  grid-template-rows: 1.05cqw minmax(0, 1fr);
 }
 
 .cost-yoy-axis,
@@ -3412,7 +3413,7 @@ button:disabled {
 .cost-yoy-axis {
   padding-left: 3.1cqw;
   color: #758294;
-  font-size: 0.5cqw;
+  font-size: 0.68cqw;
   font-weight: 900;
 }
 
@@ -3444,7 +3445,7 @@ button:disabled {
 
 .cost-yoy-row {
   color: #17212f;
-  font-size: 0.58cqw;
+  font-size: 0.74cqw;
 }
 
 .cost-chart-row > span,
@@ -3482,7 +3483,7 @@ button:disabled {
 
 .chart-empty-state span {
   color: #657386;
-  font-size: 0.62cqw;
+  font-size: 0.68cqw;
   font-weight: 850;
 }
 
@@ -3499,7 +3500,7 @@ button:disabled {
 
 .ppt-chart-card.slim .ppt-rate-row {
   min-height: 0.68cqw;
-  font-size: 0.58cqw;
+  font-size: 0.64cqw;
 }
 
 .diverging-list {
@@ -3518,7 +3519,7 @@ button:disabled {
   padding-left: 3.62cqw;
   padding-right: 3.5cqw;
   color: #8a95a3;
-  font-size: 0.5cqw;
+  font-size: 0.56cqw;
   font-weight: 900;
 }
 
@@ -3536,7 +3537,7 @@ button:disabled {
   align-items: center;
   gap: 0.42cqw;
   min-height: 0.9cqw;
-  font-size: 0.65cqw;
+  font-size: 0.72cqw;
 }
 
 .diverging-row span {
@@ -3566,7 +3567,7 @@ button:disabled {
 }
 
 .diverging-row strong {
-  font-size: 0.62cqw;
+  font-size: 0.68cqw;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -3739,12 +3740,12 @@ button:disabled {
 
 .metric-table {
   align-self: stretch;
-  font-size: 0.58cqw;
+  font-size: 0.64cqw;
 }
 
 .metric-table th,
 .metric-table td {
-  padding: 0.16cqw 0.14cqw;
+  padding: 0.14cqw 0.12cqw;
 }
 
 .complaint-table-panel,
@@ -3818,7 +3819,7 @@ button:disabled {
   align-items: center;
   min-height: 0;
   color: #111927;
-  font-size: 0.75cqw;
+  font-size: 0.8cqw;
 }
 
 .complaint-row:nth-child(odd):not(.complaint-head) {
@@ -3833,7 +3834,7 @@ button:disabled {
   background: #e9edf2;
   border-bottom: 1px solid #b9d3ea;
   color: #111927;
-  font-size: 0.84cqw;
+  font-size: 0.88cqw;
 }
 
 .complaint-head strong {
@@ -3898,20 +3899,20 @@ button:disabled {
   right: 0.2cqw;
   min-width: 2.9cqw;
   color: #28323f;
-  font-size: 0.74cqw;
+  font-size: 0.8cqw;
   font-weight: 700;
 }
 
 .complaint-score-value {
   justify-self: center;
   color: #0b3f87;
-  font-size: 0.78cqw;
+  font-size: 0.84cqw;
   font-weight: 900;
 }
 
 .complaint-row > em {
   justify-self: center;
-  font-size: 0.78cqw;
+  font-size: 0.84cqw;
   font-style: normal;
   font-weight: 900;
 }
@@ -3934,7 +3935,7 @@ button:disabled {
 
 .satisfaction-mix-head {
   color: #536274;
-  font-size: 0.62cqw;
+  font-size: 0.82cqw;
   font-weight: 900;
 }
 
@@ -3945,7 +3946,7 @@ button:disabled {
 
 .satisfaction-mix-row {
   color: #111927;
-  font-size: 0.72cqw;
+  font-size: 0.78cqw;
 }
 
 .satisfaction-mix-row > span {
@@ -3990,7 +3991,7 @@ button:disabled {
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 0.56cqw;
+  font-size: 0.76cqw;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -4005,7 +4006,7 @@ button:disabled {
 
 .satisfaction-mix-row em {
   color: #0b3f87;
-  font-size: 0.76cqw;
+  font-size: 0.82cqw;
   font-style: normal;
   font-weight: 900;
   text-align: right;
