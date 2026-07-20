@@ -89,12 +89,14 @@ export default function App() {
       setBusy("正在载入报告");
       const items = await listReports();
       setReports(items);
-      const period = queryParam("period") || items[0]?.period;
+      const requestedPeriod = queryParam("period");
+      const period = items.some((item) => item.period === requestedPeriod) ? requestedPeriod : items[0]?.period;
       if (period) {
         const loaded = await getReport(period);
         setReport(loaded);
         setYear(loaded.year);
         setMonth(loaded.month);
+        syncPeriodUrl(loaded.period);
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "载入失败");
@@ -109,6 +111,9 @@ export default function App() {
       const loaded = await bootstrapSample();
       setReport(loaded);
       setReports(await listReports());
+      setYear(loaded.year);
+      setMonth(loaded.month);
+      syncPeriodUrl(loaded.period);
       setMessage("已导入当前 5 月样例数据和补充模板样例。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "导入失败");
@@ -130,6 +135,8 @@ export default function App() {
       const loaded = await uploadReport(formData);
       setReport(loaded);
       setReports(await listReports());
+      setSelectedPageId("current-overview");
+      syncPeriodUrl(loaded.period);
       setMessage("数据包已解析，人工文案已保留。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "上传失败");
@@ -181,6 +188,24 @@ export default function App() {
     }
   }
 
+  async function handlePickReport(period: string) {
+    if (!period || period === report?.period) return;
+    try {
+      setBusy("正在切换报告月份");
+      const loaded = await getReport(period);
+      setReport(loaded);
+      setYear(loaded.year);
+      setMonth(loaded.month);
+      setSelectedPageId("current-overview");
+      syncPeriodUrl(loaded.period);
+      setMessage(`已切换至 ${loaded.year} 年 ${loaded.month} 月。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "月份切换失败");
+    } finally {
+      setBusy("");
+    }
+  }
+
   if (exportMode) {
     if (!report) return <div className="export-loading">正在载入导出版面...</div>;
     return (
@@ -203,6 +228,12 @@ export default function App() {
           </div>
         </div>
         <div className="header-status">
+          <ReportPeriodPicker
+            reports={reports}
+            value={report?.period || ""}
+            onPick={handlePickReport}
+            disabled={Boolean(busy)}
+          />
           <span>{busy || message || "报告阅读、图表复盘与导出"}</span>
           <div className="top-actions">
             <button className="ghost" onClick={loadInitial} disabled={Boolean(busy)}>
@@ -319,16 +350,45 @@ export default function App() {
             <ReportVersions
               reports={reports}
               report={report}
-              onPick={async (period) => {
-                const loaded = await getReport(period);
-                setReport(loaded);
-                setSelectedPageId("current-overview");
-              }}
+              onPick={handlePickReport}
             />
           </details>
         </section>
       </main>
     </div>
+  );
+}
+
+function syncPeriodUrl(period: string) {
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set("period", period);
+  window.history.replaceState(null, "", nextUrl);
+}
+
+function ReportPeriodPicker({
+  reports,
+  value,
+  onPick,
+  disabled
+}: {
+  reports: ReportListItem[];
+  value: string;
+  onPick: (period: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <label className="report-period-picker">
+      <CalendarDays size={18} />
+      <span>查看月份</span>
+      <select value={value} onChange={(event) => onPick(event.target.value)} disabled={disabled || !reports.length}>
+        {!reports.length ? <option value="">暂无报告</option> : null}
+        {reports.map((item) => (
+          <option key={item.period} value={item.period}>
+            {item.year}年{item.month}月
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
