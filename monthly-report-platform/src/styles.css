@@ -4049,6 +4049,182 @@ button:disabled {
   margin: 0;
 }
 
+/* Readability pass: lift dense chart and table labels without changing slide geometry. */
+.slide-footer {
+  font-size: 0.84cqw;
+}
+
+.chart-meta-row {
+  font-size: 0.72cqw;
+}
+
+.rank-row {
+  font-size: 0.74cqw;
+}
+
+.rank-index {
+  font-size: 0.64cqw;
+}
+
+.rank-row strong {
+  font-size: 0.78cqw;
+}
+
+.rank-value,
+.rank-row em {
+  font-size: 0.74cqw;
+}
+
+.ppt-y-axis,
+.ppt-value-pair {
+  font-size: 0.84cqw;
+}
+
+.ppt-bar-bottom span,
+.ppt-bar-bottom em {
+  font-size: 0.86cqw;
+}
+
+.clearance-table {
+  font-size: 0.88cqw;
+}
+
+.clearance-table th,
+.clearance-table td {
+  padding-top: 0.22cqw;
+  padding-bottom: 0.22cqw;
+}
+
+.inline-rate-bar strong,
+.status-pill {
+  font-size: 0.74cqw;
+}
+
+.inline-rate-bar strong {
+  font-size: 0.78cqw;
+}
+
+.space-year-item span,
+.space-legend {
+  font-size: 0.84cqw;
+}
+
+.space-stack-card.single .space-stack-row {
+  font-size: 0.92cqw;
+}
+
+.space-stack-card.single .space-stack-track b {
+  font-size: 0.84cqw;
+}
+
+.space-stack-card.single .space-stack-row strong,
+.space-stack-card.single .space-stack-row em {
+  font-size: 0.9cqw;
+}
+
+.kpi-strip span {
+  font-size: 0.8cqw;
+}
+
+.kpi-strip em {
+  font-size: 0.8cqw;
+}
+
+.equipment-score-head {
+  font-size: 0.78cqw;
+}
+
+.equipment-score-axis {
+  font-size: 0.8cqw;
+}
+
+.equipment-score-row,
+.equipment-defect-row {
+  font-size: 0.78cqw;
+}
+
+.equipment-score-row strong,
+.equipment-defect-row > strong {
+  font-size: 0.82cqw;
+}
+
+.equipment-defect-head {
+  font-size: 0.8cqw;
+}
+
+.equipment-defect-track {
+  height: 0.88cqw;
+}
+
+.equipment-defect-track b {
+  font-size: 0.72cqw;
+}
+
+.cost-chart-legend strong,
+.cost-yoy-axis {
+  font-size: 0.78cqw;
+}
+
+.cost-chart-row,
+.cost-yoy-row {
+  font-size: 0.78cqw;
+}
+
+.cost-chart-row strong,
+.cost-chart-row em,
+.cost-yoy-row strong {
+  font-size: 0.82cqw;
+}
+
+.ppt-chart-card.slim .ppt-rate-row {
+  font-size: 0.78cqw;
+}
+
+.ppt-rate-row strong,
+.ppt-rate-row em {
+  font-size: 0.82cqw;
+}
+
+.metric-table {
+  font-size: 0.82cqw;
+}
+
+.metric-table th,
+.metric-table td {
+  padding-top: 0.12cqw;
+  padding-bottom: 0.12cqw;
+}
+
+.axis-name {
+  font-size: 17px;
+}
+
+.quad-average-label,
+.quad-missing text {
+  font-size: 14px;
+}
+
+.dot-label {
+  font-size: 16px;
+}
+
+.complaint-row {
+  font-size: 0.84cqw;
+}
+
+.satisfaction-mix-head {
+  font-size: 0.86cqw;
+}
+
+.satisfaction-mix-row {
+  font-size: 0.84cqw;
+}
+
+.satisfaction-mix-track b,
+.satisfaction-mix-row em {
+  font-size: 0.82cqw;
+}
+
 @media (max-width: 1180px) {
   .dashboard-header,
   .report-hero,
