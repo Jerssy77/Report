@@ -2570,7 +2570,7 @@ button:disabled {
 }
 
 .efficiency-layout {
-  grid-template-rows: 2.8cqw minmax(0, 1fr) 2.35cqw;
+  grid-template-rows: 2.8cqw minmax(0, 1fr) 4.15cqw;
   gap: 0.65cqw;
 }
 
@@ -2583,7 +2583,7 @@ button:disabled {
 
 .score-layout {
   display: grid;
-  grid-template-rows: 2.8cqw minmax(0, 1fr) 2.4cqw;
+  grid-template-rows: 2.8cqw minmax(0, 1fr) 4.15cqw;
   gap: 0.65cqw;
 }
 
@@ -4254,6 +4254,175 @@ button:disabled {
 .satisfaction-mix-track b,
 .satisfaction-mix-row em {
   font-size: 0.82cqw;
+}
+
+/* Report typography baseline: body >= 11pt and dense chart labels >= 9pt at 1920x1080. */
+.ppt-chart-card.large {
+  padding: 0.68cqw 0.92cqw 0.35cqw;
+  border-color: #c9d6e3;
+}
+
+.ppt-chart-card h2,
+.quadrant-panel h2,
+.complaint-panel h2,
+.rate-panel h2,
+.score-panel h2 {
+  font-size: 1.16cqw;
+  margin-bottom: 0.42cqw;
+}
+
+.ppt-chart-card.large h2 {
+  font-size: 1.42cqw;
+}
+
+.ppt-chart-legend,
+.chart-meta-row,
+.ppt-y-axis,
+.ppt-value-pair {
+  font-size: 0.84cqw;
+}
+
+.ppt-bar-plot {
+  padding-left: 3.55cqw;
+  padding-bottom: 3.35cqw;
+}
+
+.ppt-y-axis {
+  bottom: 3.35cqw;
+  width: 3cqw;
+}
+
+.ppt-grid {
+  left: 3.55cqw;
+  bottom: 3.35cqw;
+}
+
+.ppt-bar-group {
+  grid-template-rows: minmax(0, 1fr) 1.32cqw 2.08cqw;
+}
+
+.ppt-bar-group strong,
+.ppt-bar-group em,
+.ppt-bar-bottom span,
+.ppt-bar-bottom em {
+  font-size: 0.9cqw;
+}
+
+.ppt-insights,
+.complaint-insights {
+  padding-left: 1.15cqw;
+  padding-right: 1.15cqw;
+}
+
+.ppt-insight p,
+.complaint-insights p {
+  font-size: 1.08cqw;
+  line-height: 1.34;
+}
+
+.clearance-table,
+.clearance-operating-table {
+  font-size: 0.92cqw;
+}
+
+.inline-rate-bar strong,
+.status-pill,
+.space-year-item span,
+.space-legend,
+.space-stack-card.single .space-stack-track b {
+  font-size: 0.82cqw;
+}
+
+.space-stack-card.single .space-stack-row,
+.space-stack-card.single .space-stack-row strong,
+.space-stack-card.single .space-stack-row em {
+  font-size: 0.94cqw;
+}
+
+.kpi-strip span,
+.kpi-strip em {
+  font-size: 0.84cqw;
+}
+
+.equipment-score-head,
+.equipment-score-axis,
+.equipment-score-row,
+.equipment-defect-head,
+.equipment-defect-row {
+  font-size: 0.84cqw;
+}
+
+.equipment-score-row strong,
+.equipment-defect-row > strong {
+  font-size: 0.9cqw;
+}
+
+.equipment-defect-track b {
+  font-size: 0.78cqw;
+}
+
+.cost-chart-legend strong,
+.cost-yoy-axis,
+.cost-chart-row,
+.cost-yoy-row {
+  font-size: 0.84cqw;
+}
+
+.cost-yoy-axis {
+  grid-template-columns: 3.6cqw minmax(0, 1fr) 3.6cqw;
+  padding-left: 2.6cqw;
+}
+
+.cost-yoy-axis span {
+  white-space: nowrap;
+}
+
+.cost-yoy-axis span:last-child {
+  text-align: right;
+}
+
+.cost-chart-row strong,
+.cost-chart-row em,
+.cost-yoy-row strong {
+  font-size: 0.88cqw;
+}
+
+.metric-table {
+  font-size: 0.86cqw;
+}
+
+.metric-table th {
+  font-size: 0.88cqw;
+}
+
+.axis-name,
+.dot-label,
+.quad-average-label,
+.quad-missing text,
+.quad-missing .quad-missing-title {
+  font-size: 16px;
+}
+
+.complaint-benchmarks,
+.complaint-row,
+.complaint-bar-cell strong,
+.complaint-score-value,
+.complaint-row > em {
+  font-size: 0.86cqw;
+}
+
+.complaint-head {
+  font-size: 0.92cqw;
+}
+
+.satisfaction-mix-head,
+.satisfaction-mix-row {
+  font-size: 0.88cqw;
+}
+
+.satisfaction-mix-track b,
+.satisfaction-mix-row em {
+  font-size: 0.84cqw;
 }
 
 @media (max-width: 1180px) {

@@ -1164,12 +1164,11 @@ function ComplaintBarCell({
 function ComplaintInsightList({ page, copy }: { page: ReportPage; copy: PageCopy }) {
   const lines = [
     displayText(copy.mainConclusion || page.bullets[0]),
-    displayText(copy.keyCompanies),
     displayText(copy.reason || page.bullets[1])
   ].filter(Boolean);
   return (
     <section className="complaint-insights">
-      {lines.slice(0, 3).map((line, index) => (
+      {lines.slice(0, 2).map((line, index) => (
         <p key={`${index}-${line}`}>
           <span>{index + 1}.</span>
           {line}

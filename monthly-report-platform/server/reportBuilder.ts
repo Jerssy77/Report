@@ -641,12 +641,53 @@ function generatedBullets(page: ReportPage) {
   const max = topBy(page.companies, (row) => row.current);
   const min = bottomBy(page.companies, (row) => row.current);
   const improved = topBy(page.companies, (row) => row.delta);
+  const declined = bottomBy(page.companies, (row) => row.delta);
   const summary = page.metrics[0]?.value || "—";
   const targetMetric = page.metrics.find((item) => item.label.includes("目标"));
   const targetPhrase = targetMetric ? `，目标完成${targetMetric.value || "—"}` : "";
+
+  if (page.id === "current-overview" || page.id === "arrears-overview") {
+    const metricName = page.id === "current-overview" ? "当期综合收费率" : "历欠综合收费率";
+    const trend = page.metrics[1]?.value || "—";
+    return [
+      `${metricName}${summary}，同比${trend}${targetPhrase}；${max?.company || "—"}${fmtPct(max?.current)}居首，${min?.company || "—"}${fmtPct(min?.current)}最低。`,
+      `${improved?.company || "—"}同比${fmtPp(improved?.delta)}，改善最明显；${declined?.company || "—"}同比${fmtPp(declined?.delta)}，需重点跟进。`
+    ];
+  }
+
+  if (page.id === "current-split" || page.id === "arrears-split") {
+    const leftLabel = page.data?.splitLeftTitle || page.metrics[0]?.label || "左侧项目";
+    const rightLabel = page.data?.splitRightTitle || page.metrics[2]?.label || "右侧项目";
+    return [
+      `${leftLabel}均值${page.metrics[0]?.value || "—"}，${rightLabel}均值${page.metrics[2]?.value || "—"}；${max?.company || "—"}${fmtPct(max?.current)}居${leftLabel}首位。`,
+      `${min?.company || "—"}${fmtPct(min?.current)}处于低位；${improved?.company || "—"}同比${fmtPp(improved?.delta)}，改善最明显。`
+    ];
+  }
+
+  if (page.id === "clearance") {
+    return [
+      `基础指标整体完成率${page.metrics[0]?.value || "—"}，自建回款${page.metrics[1]?.value || "—"}，外拓完成率${page.metrics[2]?.value || "—"}。`,
+      `${max?.company || "—"}${fmtPct(max?.current)}完成率最高，${min?.company || "—"}${fmtPct(min?.current)}最低，需聚焦低完成率项目回款。`
+    ];
+  }
+
+  if (page.id === "space") {
+    return [
+      `空间资源已入账${page.metrics[0]?.value || "—"}，平均完成率${page.metrics[1]?.value || "—"}，当前业绩缺口${page.metrics[2]?.value || "—"}。`,
+      `${max?.company || "—"}${fmtPct(max?.current)}完成率最高；重点推进缺口较大公司的签约、入账及续约确认。`
+    ];
+  }
+
+  if (page.id === "charging") {
+    return [
+      `充电桩收入${page.metrics[0]?.value || "—"}，毛利额${page.metrics[1]?.value || "—"}，综合利润率${page.metrics[2]?.value || "—"}。`,
+      `${improved?.company || "—"}收入同比${fmtPp(improved?.delta)}，增长最明显；持续关注负增长及数据待补充公司。`
+    ];
+  }
+
   return [
-    `${page.title}核心指标为${summary}${targetPhrase}，需持续关注低于集团均值或目标进度的公司。`,
-    `${max?.company || "—"}表现领先，${min?.company || "—"}处于低位；${improved?.company || "—"}改善最明显。`
+    `${page.subtitle}核心指标${summary}${targetPhrase}；${max?.company || "—"}表现领先，${min?.company || "—"}处于低位。`,
+    `${improved?.company || "—"}改善最明显，建议结合排名、同比变化和异常明细持续跟进。`
   ];
 }
 
@@ -668,10 +709,8 @@ function mentionsExcludedCompany(copy: PageCopy) {
 }
 
 function copyNeedsRefresh(page: ReportPage, copy: PageCopy) {
-  const text = [copy.mainConclusion, copy.keyCompanies, copy.reason, copy.note].join("\n");
-  const hasTargetMetric = page.metrics.some((item) => item.label.includes("目标"));
-  if (page.id === "repair" || page.id === "complaints" || page.id === "efficiency") return true;
-  return mentionsExcludedCompany(copy) || (!hasTargetMetric && text.includes("目标完成"));
+  if (mentionsExcludedCompany(copy)) return true;
+  return !(copy.history?.length);
 }
 
 function mergeCopy(pages: ReportPage[], prior?: Report | null): Record<PageId, PageCopy> {
@@ -880,7 +919,7 @@ export function buildReport(input: BuildInput): Report {
       ],
       companies: arrearsSplitLeft,
       secondaryCompanies: arrearsSplitRight,
-      data: { splitLeftTitle: "自建项目", splitRightTitle: "外拓项目" },
+      data: { splitLeftTitle: "1年以内", splitRightTitle: "2-3年" },
       sourceIds: sourceForPage("arrears-split")
     })
   );
@@ -1145,6 +1184,10 @@ export function buildReport(input: BuildInput): Report {
       ],
       companies: complaintRows,
       data: { satisfactionRows: complaintScoreSource.rows },
+      bullets: [
+        `${input.year}年${input.month}月集团投诉率${fmtPct(complaintGroupRate)}${residentTotal ? `（投诉${Math.round(complaintTotal)}件，常驻${Math.round(residentTotal)}户）` : ""}，同比${fmtPp(avg(complaintRows, "delta"))}；处理满意度${fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary"))}。`,
+        `${topBy(complaintRows, (row) => row.current)?.company || "—"}投诉率最高，${bottomBy(complaintRows, (row) => row.secondary)?.company || "—"}满意度最低，需结合低分占比重点跟进。`
+      ],
       sourceIds: sourceForPage("complaints")
     })
   );
