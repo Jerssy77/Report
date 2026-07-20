@@ -279,7 +279,7 @@ function HorizontalRateList({
         const maxValue = valueFormat === "score" ? 10 : 100;
         const width = signed ? Math.min(Math.abs(numeric(value)) / signedMax * 100, 100) : (clampPercent(value, maxValue) / maxValue) * 100;
         return (
-          <div className={`ppt-rate-row ${declineBottomClass(row.company, declineSet)}`} key={row.company}>
+          <div className={`ppt-rate-row${compareKey ? "" : " no-compare"} ${declineBottomClass(row.company, declineSet)}`} key={row.company}>
             <span>{row.company}</span>
             <div className={numeric(value) < 0 ? "ppt-rate-track negative" : "ppt-rate-track"}>
               <b style={{ width: `${width}%` }} />
@@ -502,16 +502,18 @@ function SpaceSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
   const completeCount = rows.filter((row) => (row.forecast || 0) >= (row.target || Infinity)).length;
   return (
     <main className="ppt-body space-layout">
-      <section className="space-headline">
-        <strong>{Math.round(totalBooked)}</strong>
-        <span>万元已入账，全年预估 {Math.round(totalForecast)} 万元</span>
-        <em>{completeCount} 家公司预计完成孰高指标</em>
-      </section>
-      <section className="space-year-strip">
-        <SpaceYearItem label="25年完成" value={Math.round(rows.reduce((sum, row) => sum + (row.lastYear || 0), 0))} />
-        <SpaceYearItem label="26年预算" value={Math.round(rows.reduce((sum, row) => sum + (row.budget || 0), 0))} />
-        <SpaceYearItem label="孰高指标" value={Math.round(totalTarget)} active />
-        <SpaceYearItem label="预计完成" value={Math.round(totalForecast)} active />
+      <section className="space-summary-band">
+        <div className="space-summary-primary">
+          <span>26年已入账</span>
+          <strong>{numberText(Math.round(totalBooked))}万</strong>
+          <em>全年预计 {numberText(Math.round(totalForecast))} 万 · {completeCount} 家公司预计达标</em>
+        </div>
+        <div className="space-year-strip">
+          <SpaceYearItem label="25年完成" value={Math.round(rows.reduce((sum, row) => sum + (row.lastYear || 0), 0))} />
+          <SpaceYearItem label="26年预算" value={Math.round(rows.reduce((sum, row) => sum + (row.budget || 0), 0))} />
+          <SpaceYearItem label="孰高指标" value={Math.round(totalTarget)} active />
+          <SpaceYearItem label="预计完成" value={Math.round(totalForecast)} active />
+        </div>
       </section>
       <section className="space-single-panel">
         <SpaceStackedChart title="空间资源指标完成情况" rows={rows} single />
