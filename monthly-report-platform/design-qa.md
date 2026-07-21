@@ -70,4 +70,36 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 - Copy: repair-specific labels and conclusions replace complaint-specific language;
   data is sourced from the June analysis workbook.
 
+## Complaint and repair readability pass
+
+- Source visual truth: `C:/Users/jerse/AppData/Local/Temp/codex-clipboard-5362c02c-4ee0-4de6-9bdd-4df0a85f0e71.png`
+- Complaint implementation: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-complaints-readable.png`
+- Repair implementation: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-repair-readable.png`
+- Full comparison: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-readability-comparison.png`
+- Risk-box comparison: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-red-box-comparison.png`
+- State: 2026-06, pages 09 and 10, fixed 1920 x 1080 slide scaled in the desktop preview.
+
+### Findings and comparison history
+
+1. Earlier capture: dense chart labels were too small at the default scaled preview
+   size (P1), especially company names, deltas, satisfaction values, and headers.
+2. Earlier capture: left-table risk labels used dashed borders while right-chart
+   risk labels used solid borders with different padding and radius (P2).
+3. Fix: complaint-style pages now use larger chart titles, headers, row labels,
+   values, bars, and satisfaction labels while preserving all 14 rows.
+4. Fix: both risk-label variants now share one compact red dashed-border rule,
+   including identical padding, radius, line height, and centered alignment.
+5. Post-fix evidence: the full and focused comparisons show improved text scale,
+   no row or label overflow, and consistent small dashed boxes on both sides.
+
+### Required fidelity surfaces
+
+- Typography: chart text is raised to a readable 0.92-1.02 cqw range; titles use
+  1.28 cqw and retain Microsoft YaHei.
+- Layout rhythm: the two-column grid, row count, bar lengths, and conclusion area
+  remain unchanged; larger text does not cause wrapping or overlap.
+- Colors: semantic red/green deltas and the established blue chart palette remain.
+- Assets: the supplied brand logo and header treatment are unchanged.
+- Copy: complaint and repair terminology, values, and conclusions remain source-backed.
+
 final result: passed

@@ -4625,6 +4625,74 @@ button:disabled {
   font-size: 0.94cqw;
 }
 
+/* Complaint-style pages stay readable after the fixed 1920x1080 canvas is scaled. */
+.complaints-dashboard-grid .ppt-chart-card h2 {
+  color: #17283a;
+  font-size: 1.28cqw;
+  line-height: 1.15;
+  margin-bottom: 0.32cqw;
+}
+
+.complaints-dashboard-grid .complaint-row {
+  font-size: 0.98cqw;
+  line-height: 1.05;
+}
+
+.complaints-dashboard-grid .complaint-head {
+  color: #17283a;
+  font-size: 1.02cqw;
+}
+
+.complaints-dashboard-grid .complaint-company,
+.complaints-dashboard-grid .complaint-bar-cell strong,
+.complaints-dashboard-grid .complaint-score-value,
+.complaints-dashboard-grid .complaint-row > em {
+  font-size: 0.96cqw;
+  font-weight: 900;
+}
+
+.complaints-dashboard-grid .complaint-bar {
+  height: 1.02cqw;
+}
+
+.complaints-dashboard-grid .satisfaction-mix-head {
+  color: #32475b;
+  font-size: 0.98cqw;
+}
+
+.complaints-dashboard-grid .satisfaction-mix-row {
+  color: #17283a;
+  font-size: 0.96cqw;
+  line-height: 1.05;
+}
+
+.complaints-dashboard-grid .satisfaction-score-track {
+  height: 0.82cqw;
+}
+
+.complaints-dashboard-grid .satisfaction-mix-track {
+  height: 0.94cqw;
+}
+
+.complaints-dashboard-grid .satisfaction-mix-track b,
+.complaints-dashboard-grid .satisfaction-mix-row em {
+  font-size: 0.92cqw;
+}
+
+.complaints-dashboard-grid .complaint-company.risk,
+.complaints-dashboard-grid .satisfaction-mix-row.decline-bottom > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  width: max-content;
+  min-width: 0;
+  padding: 0.04cqw 0.18cqw;
+  border: 1.5px dashed #e60012;
+  border-radius: 0.16cqw;
+  line-height: 1.05;
+}
+
 .slide-footer {
   font-size: 0.88cqw;
 }
