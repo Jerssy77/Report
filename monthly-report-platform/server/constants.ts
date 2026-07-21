@@ -6,7 +6,6 @@ export const DEV_FRONTEND_ORIGIN = process.env.APP_ORIGIN || "http://127.0.0.1:5
 export const APP_ROOT = process.cwd();
 export const DATA_ROOT = path.join(APP_ROOT, "data");
 export const REPORTS_ROOT = path.join(DATA_ROOT, "reports");
-export const TEMPLATE_ROOT = path.join(DATA_ROOT, "templates");
 export const SOURCE_ROOT = path.resolve(APP_ROOT, "..");
 
 export const STANDARD_COMPANY_ORDER = [

@@ -1488,13 +1488,8 @@ button:disabled {
 .clearance-layout,
 .repair-layout,
 .complaints-layout,
-.charging-layout,
 .space-layout {
   grid-template-rows: minmax(0, 1fr) 15%;
-}
-
-.charging-layout {
-  grid-template-rows: 7% minmax(0, 1fr) 13%;
 }
 
 .space-layout {
@@ -2557,7 +2552,6 @@ button:disabled {
   font-weight: 900;
 }
 
-.charging-grid,
 .repair-grid {
   min-height: 0;
   display: grid;
@@ -3516,22 +3510,6 @@ button:disabled {
   color: #657386;
   font-size: 0.68cqw;
   font-weight: 850;
-}
-
-.charging-side {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: 42% minmax(0, 1fr);
-  gap: 0.8cqw;
-}
-
-.ppt-chart-card.slim .ppt-rate-list {
-  gap: 0.12cqw;
-}
-
-.ppt-chart-card.slim .ppt-rate-row {
-  min-height: 0.68cqw;
-  font-size: 0.64cqw;
 }
 
 .diverging-list {

@@ -18,7 +18,6 @@ import type {
 } from "../shared/report.js";
 import { PAGE_ORDER, PPT_LAYOUT_MAP } from "../shared/report.js";
 import { EXCLUDED_COMPANY_NAMES, STANDARD_COMPANY_ORDER, SUMMARY_NAMES } from "./constants.js";
-import { parseSupplementWorkbook } from "./supplement.js";
 
 type Rows = unknown[][];
 
@@ -29,7 +28,6 @@ interface BuildInput {
   files: {
     analysis?: string;
     brief?: string;
-    supplement?: string;
     resident?: string;
   };
   priorReport?: Report | null;
@@ -516,13 +514,11 @@ function energyCostData(filePath?: string) {
 function scoreDistributionData(
   filePath: string | undefined,
   sheetName: string,
-  supplementRows: CompanyMetric[] = [],
   residentHouseholds?: Map<string, number>,
   preferredTitle?: string
 ) {
   const allRows = workbookRows(filePath, sheetName);
   const blocks: Array<{ title: string; rows: SatisfactionScoreRow[]; summary?: SatisfactionScoreRow }> = [];
-  const supplementMap = new Map(supplementRows.map((row) => [row.company, row]));
 
   for (let rowIndex = 0; rowIndex < allRows.length; rowIndex += 1) {
     const header = allRows[rowIndex];
@@ -549,7 +545,6 @@ function scoreDistributionData(
         const low = bins.slice(0, 6).reduce((sum, value) => sum + value, 0);
         const high = bins.slice(6).reduce((sum, value) => sum + value, 0);
         const denominator = total && total > 0 ? total : low + high;
-        const supplement = supplementMap.get(company);
         const households = residentHouseholds?.get(company) ?? null;
         const complaintRate = households && total != null ? (total / households) * 100 : null;
         const item: SatisfactionScoreRow = {
@@ -559,10 +554,10 @@ function scoreDistributionData(
           score,
           lowShare: denominator ? (low / denominator) * 100 : null,
           highShare: denominator ? (high / denominator) * 100 : null,
-          scoreDelta: supplement?.target ?? supplement?.delta ?? null,
+          scoreDelta: null,
           residentHouseholds: households,
           complaintRate,
-          complaintRateDelta: supplement?.delta ?? null
+          complaintRateDelta: null
         };
         if (SUMMARY_NAMES.has(company) || company === "总计" || company === "合计") summary = { ...item, company: "集团" };
         else if (isCompanyName(company)) blockRows.push(item);
@@ -580,22 +575,52 @@ function scoreDistributionData(
       fallbackCandidates.find((block) => block.title === preferredTitle)
     : undefined;
   const selected = preferred || selectedCandidates[selectedCandidates.length - 1] || fallbackCandidates[fallbackCandidates.length - 1];
+  const preferredMonth = Number(preferredTitle?.match(/^(\d+)月$/)?.[1] || 0);
+  const previousTitle = preferredMonth > 1 ? `${preferredMonth - 1}月` : "";
+  const previous = previousTitle ? blocks.find((block) => block.title === previousTitle) : undefined;
+  const previousMap = new Map((previous?.rows || []).map((row) => [row.company, row]));
   const rows = selected?.rows || [];
   const summary = selected?.summary;
+  const normalizedRows = STANDARD_COMPANY_ORDER.map((company) => {
+    const current = rows.find((row) => row.company === company);
+    const prior = previousMap.get(company);
+    const households = residentHouseholds?.get(company) ?? null;
+    return {
+      ...(current || {
+        company,
+        bins: [],
+        total: null,
+        score: null,
+        lowShare: null,
+        highShare: null,
+        residentHouseholds: households,
+        complaintRate: null
+      }),
+      scoreDelta: current?.score != null && prior?.score != null ? current.score - prior.score : null,
+      complaintRateDelta:
+        households && current?.total != null && prior?.total != null
+          ? ((current.total - prior.total) / households) * 100
+          : null
+    };
+  });
+  const previousSummary = previous?.summary;
+  const groupHouseholds = residentHouseholds?.get("集团") ?? null;
+  const normalizedSummary = summary
+    ? {
+        ...summary,
+        scoreDelta:
+          summary.score != null && previousSummary?.score != null
+            ? summary.score - previousSummary.score
+            : null,
+        complaintRateDelta:
+          groupHouseholds && summary.total != null && previousSummary?.total != null
+            ? ((summary.total - previousSummary.total) / groupHouseholds) * 100
+            : null
+      }
+    : undefined;
   return {
-    rows: STANDARD_COMPANY_ORDER.map((company) => rows.find((row) => row.company === company) || {
-      company,
-      bins: [],
-      total: null,
-      score: null,
-      lowShare: null,
-      highShare: null,
-      scoreDelta: supplementMap.get(company)?.target ?? supplementMap.get(company)?.delta ?? null,
-      residentHouseholds: residentHouseholds?.get(company) ?? null,
-      complaintRate: null,
-      complaintRateDelta: supplementMap.get(company)?.delta ?? null
-    }),
-    summary
+    rows: normalizedRows,
+    summary: normalizedSummary
   };
 }
 
@@ -675,13 +700,6 @@ function generatedBullets(page: ReportPage) {
     return [
       `空间资源已入账${page.metrics[0]?.value || "—"}，平均完成率${page.metrics[1]?.value || "—"}，当前业绩缺口${page.metrics[2]?.value || "—"}。`,
       `${max?.company || "—"}${fmtPct(max?.current)}完成率最高；重点推进缺口较大公司的签约、入账及续约确认。`
-    ];
-  }
-
-  if (page.id === "charging") {
-    return [
-      `充电桩收入${page.metrics[0]?.value || "—"}，毛利额${page.metrics[1]?.value || "—"}，综合利润率${page.metrics[2]?.value || "—"}。`,
-      `${improved?.company || "—"}收入同比${fmtPp(improved?.delta)}，增长最明显；持续关注负增长及数据待补充公司。`
     ];
   }
 
@@ -772,21 +790,15 @@ export function buildReport(input: BuildInput): Report {
   if (!input.files.analysis) {
     validation.push({ id: "missing-analysis", severity: "error", message: "缺少数据分析 Excel。" });
   }
-  if (!input.files.supplement) {
-    validation.push({ id: "missing-supplement", severity: "error", message: "缺少补充数据 Excel。" });
-  }
-
   const targets = targetsFromAnalysis(input.files.analysis);
   const current = overallCompanies(input.files.brief, "current");
   const arrears = overallCompanies(input.files.brief, "arrears");
   const currentTargetAverage =
     current.companies.reduce((sum, row) => sum + (targets.get(row.company) || 0), 0) /
     Math.max(current.companies.filter((row) => targets.has(row.company)).length, 1);
-  const supplement = parseSupplementWorkbook(input.files.supplement);
-  const chargingRows = completeCompanyMetrics(supplement.charging.rows);
   const residentMap = residentHouseholds(input.files.resident);
-  const repairScoreSource = scoreDistributionData(input.files.analysis, "入户维修", supplement.repair, undefined, `${input.month}月`);
-  const complaintScoreSource = scoreDistributionData(input.files.analysis, "投诉评分", supplement.complaints, residentMap);
+  const repairScoreSource = scoreDistributionData(input.files.analysis, "入户维修", undefined, `${input.month}月`);
+  const complaintScoreSource = scoreDistributionData(input.files.analysis, "投诉评分", residentMap, `${input.month}月`);
   const repairRows = completeCompanyMetrics(
     repairScoreSource.rows.map((row) => ({
       company: row.company,
@@ -1092,37 +1104,13 @@ export function buildReport(input: BuildInput): Report {
     });
   }
 
-  pages.push(
-    makePage({
-      id: "charging",
-      order: 9,
-      title: `${input.year}年${input.month}月运营回顾`,
-      subtitle: "充电桩",
-      chartTitle: "充电桩收入与利润情况",
-      kind: "dual-table",
-      metrics: [
-        metric("收入", `${supplement.charging.summary.income}万`, "blue", fmtPp(supplement.charging.summary.incomeYoY)),
-        metric("毛利额", `${supplement.charging.summary.grossProfit}万`, "blue"),
-        metric("利润率", fmtPct(supplement.charging.summary.profitRate), "green")
-      ],
-      keyCompanies: [
-        key("利润最高", topBy(chargingRows, (row) => row.current), fmtPct(topBy(chargingRows, (row) => row.current)?.current), "blue"),
-        key("自营最高", topBy(chargingRows, (row) => row.secondary), fmtPct(topBy(chargingRows, (row) => row.secondary)?.secondary), "green"),
-        key("增长最高", topBy(chargingRows, (row) => row.delta), fmtPp(topBy(chargingRows, (row) => row.delta)?.delta), "green")
-      ],
-      companies: chargingRows,
-      sourceIds: sourceForPage("charging")
-    })
-  );
-  sources.push(source("src-charging", "charging", "充电桩", "supplement", input.files.supplement, "充电桩", "A2:E20"));
-
   const repairSummary = repairScoreSource.summary;
   const repairHighShare = repairSummary?.highShare ?? avg(repairRows, "secondary");
   const repairLowShare = repairSummary?.lowShare ?? avg(repairRows, "target");
   pages.push(
     makePage({
       id: "repair",
-      order: 10,
+      order: 9,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "入户维修满意度",
       chartTitle: "入户维修满意度与响应及时率",
@@ -1152,6 +1140,7 @@ export function buildReport(input: BuildInput): Report {
   const complaintTotal = complaintSummary?.total ?? sum(complaintRows, "amount");
   const residentTotal = residentMap.get("集团") ?? sum(complaintRows, "previous");
   const complaintGroupRate = residentTotal ? (complaintTotal / residentTotal) * 100 : avg(complaintRows, "current");
+  const complaintRateDelta = complaintSummary?.complaintRateDelta ?? avg(complaintRows, "delta");
   const complaintHighShare =
     complaintSummary?.highShare ??
     (() => {
@@ -1163,14 +1152,14 @@ export function buildReport(input: BuildInput): Report {
   pages.push(
     makePage({
       id: "complaints",
-      order: 11,
+      order: 10,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "投诉管理",
       chartTitle: "投诉率与投诉处理满意度",
       kind: "dual-table",
       metrics: [
         metric("集团投诉率", fmtPct(complaintGroupRate), "blue", residentTotal ? `${Math.round(complaintTotal)} / ${Math.round(residentTotal)}户` : undefined),
-        metric("投诉率同比", fmtPp(avg(complaintRows, "delta")), Number(avg(complaintRows, "delta") || 0) <= 0 ? "green" : "red"),
+        metric("投诉率同比", fmtPp(complaintRateDelta), Number(complaintRateDelta || 0) <= 0 ? "green" : "red"),
         metric("处理满意度", fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary")), "blue"),
         metric("7-10分占比", fmtPct(complaintHighShare), "green")
       ],
@@ -1185,7 +1174,7 @@ export function buildReport(input: BuildInput): Report {
       companies: complaintRows,
       data: { satisfactionRows: complaintScoreSource.rows },
       bullets: [
-        `${input.year}年${input.month}月集团投诉率${fmtPct(complaintGroupRate)}${residentTotal ? `（投诉${Math.round(complaintTotal)}件，常驻${Math.round(residentTotal)}户）` : ""}，同比${fmtPp(avg(complaintRows, "delta"))}；处理满意度${fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary"))}。`,
+        `${input.year}年${input.month}月集团投诉率${fmtPct(complaintGroupRate)}${residentTotal ? `（投诉${Math.round(complaintTotal)}件，常驻${Math.round(residentTotal)}户）` : ""}，同比${fmtPp(complaintRateDelta)}；处理满意度${fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary"))}。`,
         `${topBy(complaintRows, (row) => row.current)?.company || "—"}投诉率最高，${bottomBy(complaintRows, (row) => row.secondary)?.company || "—"}满意度最低，需结合低分占比重点跟进。`
       ],
       sourceIds: sourceForPage("complaints")
@@ -1201,7 +1190,7 @@ export function buildReport(input: BuildInput): Report {
   pages.push(
     makePage({
       id: "efficiency",
-      order: 12,
+      order: 11,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "效率管理",
       chartTitle: "基础信息维护与400知晓率",
@@ -1249,7 +1238,6 @@ export function buildReport(input: BuildInput): Report {
     files: {
       analysis: input.files.analysis ? path.basename(input.files.analysis) : undefined,
       brief: input.files.brief ? path.basename(input.files.brief) : undefined,
-      supplement: input.files.supplement ? path.basename(input.files.supplement) : undefined,
       resident: input.files.resident ? path.basename(input.files.resident) : undefined
     },
     pages: pages.sort((a, b) => a.order - b.order),

@@ -7,12 +7,11 @@ export type PageId =
   | "space"
   | "equipment-health"
   | "energy-cost"
-  | "charging"
   | "repair"
   | "complaints"
   | "efficiency";
 
-export type ReportFileKind = "analysis" | "brief" | "supplement" | "resident";
+export type ReportFileKind = "analysis" | "brief" | "resident";
 
 export interface SourceTrace {
   id: string;
@@ -167,7 +166,6 @@ export interface ReportPage {
     | "space-progress"
     | "equipment-health"
     | "energy-cost"
-    | "charging-dashboard"
     | "repair-dashboard"
     | "complaints-dashboard"
     | "efficiency-dashboard";
@@ -230,10 +228,9 @@ export const PPT_LAYOUT_MAP: Record<PageId, Pick<ReportPage, "templateSlide" | "
   space: { templateSlide: 6, layout: "space-progress", role: "空间资源年度/季度进度" },
   "equipment-health": { templateSlide: 7, layout: "equipment-health", role: "设施设备健康度" },
   "energy-cost": { templateSlide: 8, layout: "energy-cost", role: "自用能耗成本管控" },
-  charging: { templateSlide: 9, layout: "charging-dashboard", role: "充电桩经营分析" },
-  repair: { templateSlide: 10, layout: "repair-dashboard", role: "入户维修满意度" },
-  complaints: { templateSlide: 11, layout: "complaints-dashboard", role: "投诉管理" },
-  efficiency: { templateSlide: 12, layout: "efficiency-dashboard", role: "效率管理" }
+  repair: { templateSlide: 9, layout: "repair-dashboard", role: "入户维修满意度" },
+  complaints: { templateSlide: 10, layout: "complaints-dashboard", role: "投诉管理" },
+  efficiency: { templateSlide: 11, layout: "efficiency-dashboard", role: "效率管理" }
 };
 
 export const PAGE_ORDER: Array<{ id: PageId; title: string; subtitle: string }> = [
@@ -245,7 +242,6 @@ export const PAGE_ORDER: Array<{ id: PageId; title: string; subtitle: string }> 
   { id: "space", title: "空间资源", subtitle: "空间资源" },
   { id: "equipment-health", title: "设施设备健康度", subtitle: "设施设备健康度" },
   { id: "energy-cost", title: "自用能耗成本管控", subtitle: "自用能耗成本管控" },
-  { id: "charging", title: "充电桩", subtitle: "充电桩" },
   { id: "repair", title: "入户维修满意度", subtitle: "入户维修满意度" },
   { id: "complaints", title: "投诉管理", subtitle: "投诉管理" },
   { id: "efficiency", title: "效率管理", subtitle: "效率管理" }

@@ -320,8 +320,6 @@ export function SlideBody({ page, copy }: { page: ReportPage; copy: PageCopy }) 
       return <EquipmentHealthSlide page={page} copy={copy} />;
     case "energy-cost":
       return <EnergyCostSlide page={page} copy={copy} />;
-    case "charging-dashboard":
-      return <ChargingSlide page={page} copy={copy} />;
     case "repair-dashboard":
       return <RepairSlide page={page} copy={copy} />;
     case "complaints-dashboard":
@@ -925,28 +923,6 @@ function ScoreRankList({ rows, limit = 14, valueLabel = "得分 / 权重" }: { r
         );
       })}
     </div>
-  );
-}
-
-function ChargingSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
-  return (
-    <main className="ppt-body charging-layout">
-      <KpiStrip metrics={page.metrics} />
-      <section className="charging-grid">
-        <div className="quadrant-panel">
-          <h2>充电桩经营分析</h2>
-          <Quadrant rows={page.companies} xLabel="用电水平" yLabel="流量收入" />
-        </div>
-        <div className="charging-side">
-          <div className="ppt-chart-card slim">
-            <h2>充电桩收入情况-整体</h2>
-            <HorizontalRateList rows={page.companies} valueKey="delta" compareKey="delta" limit={13} />
-          </div>
-          <MetricTable rows={page.companies} columns={["综合利润", "自营端口", "联营端口"]} />
-        </div>
-      </section>
-      <InsightList page={page} copy={copy} compact />
-    </main>
   );
 }
 

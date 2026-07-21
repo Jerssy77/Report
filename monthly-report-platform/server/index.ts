@@ -4,10 +4,9 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import multer from "multer";
 import type { PageCopy, PageId, ReportFileKind } from "../shared/report.js";
-import { DATA_ROOT, SERVER_PORT, SOURCE_ROOT, TEMPLATE_ROOT } from "./constants.js";
+import { DATA_ROOT, SERVER_PORT, SOURCE_ROOT } from "./constants.js";
 import { exportReport } from "./exporter.js";
 import { buildReport, regenerateCopyForPage } from "./reportBuilder.js";
-import { createSupplementWorkbookBuffer } from "./supplement.js";
 import {
   copyFileIntoReport,
   ensureReportFolders,
@@ -60,7 +59,6 @@ async function existingFileMap(period: string) {
     files: {
       analysis: sourceFilePath(period, "analysis", prior?.files.analysis),
       brief: sourceFilePath(period, "brief", prior?.files.brief),
-      supplement: sourceFilePath(period, "supplement", prior?.files.supplement),
       resident: sourceFilePath(period, "resident", prior?.files.resident)
     }
   };
@@ -69,7 +67,7 @@ async function existingFileMap(period: string) {
 async function saveUploaded(period: string, files: Partial<Record<ReportFileKind, Express.Multer.File[]>>) {
   await ensureReportFolders(period);
   const saved: Partial<Record<ReportFileKind, string>> = {};
-  for (const kind of ["analysis", "brief", "supplement", "resident"] as ReportFileKind[]) {
+  for (const kind of ["analysis", "brief", "resident"] as ReportFileKind[]) {
     const file = files[kind]?.[0];
     if (!file) continue;
     const target = path.join(sourceDir(period), `${kind}.xlsx`);
@@ -136,9 +134,7 @@ app.post("/api/reports/bootstrap-sample", async (_req, res, next) => {
     const analysis = await copyFileIntoReport(period, analysisSample, "analysis.xlsx");
     const brief = await copyFileIntoReport(period, briefSample, "brief.xlsx");
     const resident = residentSample ? await copyFileIntoReport(period, residentSample, "resident.xlsx") : undefined;
-    const supplement = path.join(sourceDir(period), "supplement.xlsx");
-    await fs.writeFile(supplement, createSupplementWorkbookBuffer());
-    const report = await buildAndPersist(period, year, month, { analysis, brief, supplement, resident });
+    const report = await buildAndPersist(period, year, month, { analysis, brief, resident });
     res.json(report);
   } catch (error) {
     next(error);
@@ -150,7 +146,6 @@ app.post(
   upload.fields([
     { name: "analysis", maxCount: 1 },
     { name: "brief", maxCount: 1 },
-    { name: "supplement", maxCount: 1 },
     { name: "resident", maxCount: 1 }
   ]),
   async (req, res, next) => {
@@ -242,18 +237,6 @@ app.get("/api/reports/:period/exports/:exportId/:kind", async (req, res, next) =
     if (!item) return res.status(404).json({ message: "未找到导出版本。" });
     const file = req.params.kind === "pptx" ? item.pptxPath : item.pdfPath;
     res.download(file);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get("/api/templates/supplement.xlsx", async (_req, res, next) => {
-  try {
-    await fs.mkdir(TEMPLATE_ROOT, { recursive: true });
-    const buffer = createSupplementWorkbookBuffer();
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", encodeURIComponent("attachment; filename=补充数据模板.xlsx"));
-    res.end(buffer);
   } catch (error) {
     next(error);
   }

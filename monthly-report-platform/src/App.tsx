@@ -66,7 +66,6 @@ export default function App() {
   const [files, setFiles] = useState<Record<string, File | null>>({
     analysis: null,
     brief: null,
-    supplement: null,
     resident: null
   });
 
@@ -114,7 +113,7 @@ export default function App() {
       setYear(loaded.year);
       setMonth(loaded.month);
       syncPeriodUrl(loaded.period);
-      setMessage("已导入当前 5 月样例数据和补充模板样例。");
+      setMessage("已导入当前 5 月样例数据。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "导入失败");
     } finally {
@@ -128,7 +127,7 @@ export default function App() {
       const formData = new FormData();
       formData.append("year", String(year));
       formData.append("month", String(month));
-      for (const key of ["analysis", "brief", "supplement", "resident"]) {
+      for (const key of ["analysis", "brief", "resident"]) {
         const file = files[key];
         if (file) formData.append(key, file);
       }
@@ -316,7 +315,7 @@ export default function App() {
               <FileSpreadsheet size={48} />
               <span className="overline">运营月报</span>
               <h1>先导入一个报告数据包</h1>
-              <p>载入当前 5 月样例，或上传新的数据分析、经营简报和补充数据 Excel 后生成 9 页经营月报。</p>
+              <p>载入当前 5 月样例，或上传数据分析、经营简报和常驻户数 Excel 后生成 11 页经营月报。</p>
               <button className="primary" onClick={handleBootstrap} disabled={Boolean(busy)}>
                 载入当前 5 月样例
               </button>
@@ -499,7 +498,6 @@ function UploadPanel({
       </div>
       <FileInput label="数据分析" name="analysis" onPick={(file) => setFiles((prev) => ({ ...prev, analysis: file }))} />
       <FileInput label="经营简报" name="brief" onPick={(file) => setFiles((prev) => ({ ...prev, brief: file }))} />
-      <FileInput label="补充数据" name="supplement" onPick={(file) => setFiles((prev) => ({ ...prev, supplement: file }))} />
       <FileInput label="常驻户数" name="resident" onPick={(file) => setFiles((prev) => ({ ...prev, resident: file }))} />
       <div className="panel-actions">
         <button className="primary" onClick={handleUpload} disabled={busy}>
@@ -509,9 +507,6 @@ function UploadPanel({
           载入样例
         </button>
       </div>
-      <a className="template-link" href={assetUrl("/api/templates/supplement.xlsx")}>
-        下载补充数据模板
-      </a>
     </div>
   );
 }
