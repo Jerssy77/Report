@@ -53,6 +53,11 @@ function scoreText(value: number | null | undefined, digits = 1) {
   return `${value.toFixed(digits)}分`;
 }
 
+function hundredScoreText(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return "—";
+  return `${Math.round(value * 10)}`;
+}
+
 function plainNumber(value: number | null | undefined, digits = 1) {
   if (value == null || Number.isNaN(value)) return "—";
   return numberText(value, digits);
@@ -503,23 +508,20 @@ function InlineRateBar({ value }: { value: number }) {
 
 function SpaceSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
   const rows = page.data?.spaceRows || [];
-  const totalTarget = rows.reduce((sum, row) => sum + (row.target || 0), 0);
-  const totalBooked = rows.reduce((sum, row) => sum + (row.booked || 0), 0);
-  const totalForecast = rows.reduce((sum, row) => sum + (row.forecast || 0), 0);
-  const completeCount = rows.filter((row) => (row.forecast || 0) >= (row.target || Infinity)).length;
+  const companyRows = rows.filter((row) => row.company !== "集团");
+  const group = rows.find((row) => row.company === "集团");
+  const totalTarget = group?.target ?? companyRows.reduce((sum, row) => sum + (row.target || 0), 0);
+  const totalBooked = group?.booked ?? companyRows.reduce((sum, row) => sum + (row.booked || 0), 0);
+  const totalForecast = group?.forecast ?? companyRows.reduce((sum, row) => sum + (row.forecast || 0), 0);
+  const totalGap = group?.gap ?? companyRows.reduce((sum, row) => sum + (row.gap || 0), 0);
+  const completion = totalTarget ? totalForecast / totalTarget * 100 : 0;
   return (
     <main className="ppt-body space-layout">
       <section className="space-summary-band">
         <div className="space-summary-primary">
           <span>26年已入账</span>
           <strong>{numberText(Math.round(totalBooked))}万</strong>
-          <em>全年预计 {numberText(Math.round(totalForecast))} 万 · {completeCount} 家公司预计达标</em>
-        </div>
-        <div className="space-year-strip">
-          <SpaceYearItem label="25年完成" value={Math.round(rows.reduce((sum, row) => sum + (row.lastYear || 0), 0))} />
-          <SpaceYearItem label="26年预算" value={Math.round(rows.reduce((sum, row) => sum + (row.budget || 0), 0))} />
-          <SpaceYearItem label="孰高指标" value={Math.round(totalTarget)} active />
-          <SpaceYearItem label="预计完成" value={Math.round(totalForecast)} active />
+          <em>全年预计 {numberText(Math.round(totalForecast))} 万 · 集团完成率 {pct(completion)} · 业绩缺口 {numberText(Math.round(totalGap))} 万</em>
         </div>
       </section>
       <section className="space-single-panel">
@@ -527,15 +529,6 @@ function SpaceSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
       </section>
       <InsightList page={page} copy={copy} compact />
     </main>
-  );
-}
-
-function SpaceYearItem({ label, value, active = false }: { label: string; value: number; active?: boolean }) {
-  return (
-    <div className={active ? "space-year-item active" : "space-year-item"}>
-      <span>{label}</span>
-      <strong>{numberText(value)}</strong>
-    </div>
   );
 }
 
@@ -555,7 +548,11 @@ function SpaceStackedChart({
     if (!target) return 0;
     return ((target - numeric(row.forecast)) / target) * 100;
   };
-  const sortedRows = [...rows].sort((left, right) => gapPercent(left) - gapPercent(right));
+  const groupRow = rows.find((row) => row.company === "集团");
+  const sortedRows = [
+    ...rows.filter((row) => row.company !== "集团").sort((left, right) => gapPercent(left) - gapPercent(right)),
+    ...(groupRow ? [groupRow] : [])
+  ];
   return (
     <div className={`${emphasized ? "space-stack-card emphasized" : "space-stack-card"}${single ? " single" : ""}`}>
       <div className="space-chart-head">
@@ -579,7 +576,7 @@ function SpaceStackedChart({
           const gap = Math.max(0, 100 - booked - pending - renewal);
           const pressure = numeric(row.gap) < 0 ? "gap-risk" : "gap-good";
           return (
-            <div className={`space-stack-row ${pressure}`} key={row.company}>
+            <div className={`space-stack-row ${pressure}${row.company === "集团" ? " group" : ""}`} key={row.company}>
               <span>{row.company}</span>
               <div className="space-stack-track">
                 <b className="booked" style={{ width: `${booked}%` }}>{booked > 12 ? numberText(row.booked, 1) : ""}</b>
@@ -1059,7 +1056,7 @@ function FocusRateRange({
   );
 }
 
-function SatisfactionMixChart({ rows }: { rows: SatisfactionScoreRow[] }) {
+function SatisfactionMixChart({ rows, hundredPoint = false }: { rows: SatisfactionScoreRow[]; hundredPoint?: boolean }) {
   const sorted = [...rows].sort((left, right) => numeric(right.score) - numeric(left.score)).slice(0, 13);
   const bottomSet = new Set(sorted.slice(-3).map((row) => row.company));
   return (
@@ -1085,7 +1082,7 @@ function SatisfactionMixChart({ rows }: { rows: SatisfactionScoreRow[] }) {
               <b className="low" style={{ width: `${low / total * 100}%` }}>{low > 9 ? pct(low) : ""}</b>
               <b className="high" style={{ width: `${high / total * 100}%` }}>{high > 12 ? pct(high) : ""}</b>
             </div>
-            <em>{scoreText(row.score)}</em>
+            <em>{hundredPoint ? hundredScoreText(row.score) : scoreText(row.score)}</em>
           </div>
         );
       })}
@@ -1098,16 +1095,21 @@ function ComplaintsSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
   const complaintAverage = average(page.companies, "current") ?? 0;
   const complaintDeltaAverage = average(page.companies, "delta") ?? 0;
   const satisfactionAverage = average(page.companies, "secondary") ?? 0;
+  const complaintGroupRate = firstNumber(page.metrics.find((item) => item.label === "集团投诉率")?.value || "") ?? complaintAverage;
+  const complaintGroupDelta = firstNumber(page.metrics.find((item) => item.label === "投诉率同比")?.value || "") ?? complaintDeltaAverage;
+  const complaintGroupScore = (firstNumber(page.metrics.find((item) => item.label === "处理满意度")?.value || "") ?? satisfactionAverage * 10) / 10;
   const complaintMax = Math.max(5, Math.ceil(Math.max(...rows.map((row) => Number(row.current || 0)), complaintAverage)));
   const satisfactionBottomSet = new Set([...rows].sort((left, right) => numeric(left.secondary) - numeric(right.secondary)).slice(0, 3).map((row) => row.company));
   const satisfactionRows = page.data?.satisfactionRows || [];
+  const showCompletion = page.data?.complaintCompletionSummary != null || rows.some((row) => row.completionRate != null);
   const tableRows = [
     ...rows,
     {
       company: "集团",
-      current: complaintAverage,
-      delta: complaintDeltaAverage,
-      secondary: satisfactionAverage
+      current: complaintGroupRate,
+      delta: complaintGroupDelta,
+      secondary: complaintGroupScore,
+      completionRate: page.data?.complaintCompletionSummary ?? null
     }
   ];
   return (
@@ -1117,12 +1119,13 @@ function ComplaintsSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
           <div className="complaint-benchmarks">
             <span><i className="complaint-dash group" />{pct(complaintAverage)} 集团投诉率均值</span>
           </div>
-          <div className="complaint-table rate-only">
+          <div className={`complaint-table rate-only${showCompletion ? " complaint-with-completion" : ""}`}>
             <div className="complaint-row complaint-head">
               <strong>公司</strong>
               <strong>投诉率</strong>
               <strong>同比</strong>
-              <strong>满意度</strong>
+              {showCompletion ? <strong>6月完成率</strong> : null}
+              <strong>满意度得分</strong>
             </div>
             {tableRows.map((row) => {
               const isTotal = row.company === "集团";
@@ -1132,7 +1135,8 @@ function ComplaintsSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
                   <span className={satisfactionRisk ? "complaint-company risk" : "complaint-company"}>{row.company}</span>
                   <ComplaintBarCell value={row.current} benchmark={complaintAverage} max={complaintMax} />
                   <em className={deltaClass(row.delta, true)}>{pp(row.delta)}</em>
-                  <strong className="complaint-score-value">{scoreText(row.secondary)}</strong>
+                  {showCompletion ? <strong className="complaint-completion-value">{pct(row.completionRate)}</strong> : null}
+                  <strong className="complaint-score-value">{hundredScoreText(row.secondary)}</strong>
                 </div>
               );
             })}
@@ -1140,7 +1144,7 @@ function ComplaintsSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
         </div>
         <div className="ppt-chart-card">
           <h2>投诉满意度分值与评分结构</h2>
-          <SatisfactionMixChart rows={satisfactionRows} />
+          <SatisfactionMixChart rows={satisfactionRows} hundredPoint />
         </div>
       </section>
       <ComplaintInsightList page={page} copy={copy} />
@@ -1155,11 +1159,11 @@ function EfficiencySlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
       <section className="efficiency-chart-grid">
         <div className="ppt-chart-card">
           <h2>基础信息维护合格率（自建）</h2>
-          <VerticalBarChart rows={page.companies} previousLabel="1月" currentLabel="5月" target={95} compact />
+          <VerticalBarChart rows={page.companies} previousLabel="25年1-6月" currentLabel="26年1-6月" target={95} compact />
         </div>
         <div className="ppt-chart-card">
           <h2>400知晓率（自建）</h2>
-          <VerticalBarChart rows={page.secondaryCompanies || []} previousLabel="1月" currentLabel="5月" target={50} compact />
+          <VerticalBarChart rows={page.secondaryCompanies || []} previousLabel="25年1-6月" currentLabel="26年1-6月" target={50} compact />
         </div>
       </section>
       <InsightList page={page} copy={copy} compact />

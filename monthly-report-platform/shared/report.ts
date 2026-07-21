@@ -40,6 +40,7 @@ export interface CompanyMetric {
   delta?: number | null;
   amount?: number | null;
   secondary?: number | null;
+  completionRate?: number | null;
   category?: string;
 }
 
@@ -121,6 +122,7 @@ export interface PageDataBlocks {
   equipmentRows?: EquipmentHealthRow[];
   energyRows?: EnergyCostRow[];
   satisfactionRows?: SatisfactionScoreRow[];
+  complaintCompletionSummary?: number | null;
   energyCostMode?: "cost-compare" | "margin";
   splitLeftTitle?: string;
   splitRightTitle?: string;

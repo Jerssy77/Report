@@ -104,6 +104,11 @@ function fmtScore(value: number | null | undefined, digits = 1) {
   return `${value.toFixed(digits)}分`;
 }
 
+function fmtHundredScore(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${Math.round(value * 10)}`;
+}
+
 function fmtAmount(value: number | null | undefined, digits = 0) {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(digits)}万`;
@@ -477,9 +482,13 @@ function clearanceData(filePath?: string) {
 
 function spaceData(filePath?: string) {
   const rows = workbookRows(filePath, "空间资源").slice(2);
-  const detailRows: SpaceResourceRow[] = uniqueByCompany(
-    rows.map((row) => ({
-      company: str(row[0]),
+  const detailRows: SpaceResourceRow[] = [];
+  let summary: SpaceResourceRow | undefined;
+  for (const row of rows) {
+    const company = str(row[0]);
+    if (!company) continue;
+    const item: SpaceResourceRow = {
+      company,
       lastYear: num(row[1]),
       budget: num(row[2]),
       target: num(row[3]),
@@ -490,10 +499,15 @@ function spaceData(filePath?: string) {
       forecast: num(row[8]),
       gap: num(row[9]),
       previousGap: num(row[10]),
-      newAmount: num(row[11]),
-      remark: str(row[12]) || undefined
-    }))
-  );
+      newAmount: num(row[13]),
+      remark: str(row[14]) || undefined
+    };
+    if (SUMMARY_NAMES.has(company) || company === "合计" || company === "总计") {
+      summary = { ...item, company: "集团" };
+    } else if (isCompanyName(company) && !detailRows.some((detail) => detail.company === company)) {
+      detailRows.push(item);
+    }
+  }
   const metrics = sortCompanies(
     uniqueCompanies(
       detailRows.map((row) => ({
@@ -507,7 +521,7 @@ function spaceData(filePath?: string) {
       }))
     )
   );
-  return { metrics, detailRows };
+  return { metrics, detailRows, summary };
 }
 
 function equipmentHealthData(filePath?: string) {
@@ -747,6 +761,30 @@ function residentHouseholds(filePath?: string) {
   return values;
 }
 
+function monthlyRateData(filePath: string | undefined, sheetName: string, monthLabel: string) {
+  const rows = workbookRows(filePath, sheetName);
+  const headerIndex = rows.findIndex(
+    (row) => str(row[0]) === "公司" && row.some((cell) => str(cell) === monthLabel)
+  );
+  if (headerIndex < 0) {
+    return { values: new Map<string, number>(), summary: null as number | null };
+  }
+  const monthIndex = rows[headerIndex].findIndex((cell) => str(cell) === monthLabel);
+  const values = new Map<string, number>();
+  let summary: number | null = null;
+  for (const row of rows.slice(headerIndex + 1)) {
+    const company = str(row[0]);
+    if (!company) continue;
+    const value = pct(row[monthIndex]);
+    if (value == null) continue;
+    if (SUMMARY_NAMES.has(company) || company === "合计" || company === "总计") {
+      summary = value;
+      break;
+    } else if (isCompanyName(company)) values.set(company, value);
+  }
+  return { values, summary };
+}
+
 function efficiencyData(filePath: string | undefined, sheetName: string, month: number, target: number) {
   const rows = workbookRows(filePath, sheetName);
   const headerIndex = rows.findIndex((row) => str(row[0]) === "公司");
@@ -819,9 +857,22 @@ function generatedBullets(page: ReportPage) {
   }
 
   if (page.id === "space") {
+    const rows = (page.data?.spaceRows || []).filter((row) => row.company !== "集团");
+    const gapCompanies = [...rows]
+      .filter((row) => typeof row.gap === "number" && row.gap < 0)
+      .sort((left, right) => Number(left.gap) - Number(right.gap))
+      .slice(0, 3)
+      .map((row) => row.company)
+      .join("、");
+    const renewalCompanies = [...rows]
+      .filter((row) => typeof row.pendingRenewal === "number" && row.pendingRenewal > 0)
+      .sort((left, right) => Number(right.pendingRenewal) - Number(left.pendingRenewal))
+      .slice(0, 3)
+      .map((row) => row.company)
+      .join("、");
     return [
-      `空间资源已入账${page.metrics[0]?.value || "—"}，平均完成率${page.metrics[1]?.value || "—"}，当前业绩缺口${page.metrics[2]?.value || "—"}。`,
-      `${max?.company || "—"}${fmtPct(max?.current)}完成率最高；重点推进缺口较大公司的签约、入账及续约确认。`
+      `空间资源已入账${page.metrics[0]?.value || "—"}，全年预计${page.metrics[1]?.sublabel || "—"}，集团完成率${page.metrics[1]?.value || "—"}，当前业绩缺口${page.metrics[2]?.value || "—"}。`,
+      `缺口重点关注${gapCompanies || "—"}；续签重点推进${renewalCompanies || "—"}。`
     ];
   }
 
@@ -921,6 +972,9 @@ export function buildReport(input: BuildInput): Report {
   const residentMap = residentHouseholds(input.files.resident);
   const repairScoreSource = scoreDistributionData(input.files.analysis, "入户维修", undefined, `${input.month}月`);
   const complaintScoreSource = scoreDistributionData(input.files.analysis, "投诉评分", residentMap, `${input.month}月`);
+  const complaintCompletionSource = input.month === 6
+    ? monthlyRateData(input.files.analysis, "投诉完成率", "6月")
+    : { values: new Map<string, number>(), summary: null as number | null };
   const repairRows = completeCompanyMetrics(
     repairScoreSource.rows.map((row) => ({
       company: row.company,
@@ -940,6 +994,7 @@ export function buildReport(input: BuildInput): Report {
       amount: row.total ?? null,
       delta: row.complaintRateDelta ?? null,
       secondary: row.score ?? null,
+      completionRate: complaintCompletionSource.values.get(row.company) ?? null,
       target: row.scoreDelta ?? null
     }))
   );
@@ -1143,6 +1198,12 @@ export function buildReport(input: BuildInput): Report {
 
   const spaceSource = spaceData(input.files.brief);
   const space = spaceSource.metrics;
+  const spaceSummary = spaceSource.summary;
+  const spaceRows = spaceSummary ? [...spaceSource.detailRows, spaceSummary] : spaceSource.detailRows;
+  const spaceCompletion =
+    spaceSummary?.forecast != null && spaceSummary.target
+      ? (spaceSummary.forecast / spaceSummary.target) * 100
+      : avg(space, "current");
   pages.push(
     makePage({
       id: "space",
@@ -1152,9 +1213,9 @@ export function buildReport(input: BuildInput): Report {
       chartTitle: "空间资源指标完成情况",
       kind: "space",
       metrics: [
-        metric("已入账", `${Math.round(sum(space, "amount"))}万`, "blue"),
-        metric("平均完成率", fmtPct(avg(space, "current")), "blue"),
-        metric("业绩缺口", `${Math.round(sum(space, "secondary"))}万`, Number(sum(space, "secondary")) >= 0 ? "green" : "red")
+        metric("已入账", fmtAmount(spaceSummary?.booked ?? sum(space, "amount")), "blue"),
+        metric("集团完成率", fmtPct(spaceCompletion), "blue", fmtAmount(spaceSummary?.forecast ?? null)),
+        metric("业绩缺口", fmtAmount(spaceSummary?.gap ?? sum(space, "secondary")), Number(spaceSummary?.gap ?? sum(space, "secondary")) >= 0 ? "green" : "red")
       ],
       keyCompanies: [
         key("完成率最高", topBy(space, (row) => row.current), fmtPct(topBy(space, (row) => row.current)?.current), "blue"),
@@ -1162,7 +1223,7 @@ export function buildReport(input: BuildInput): Report {
         key("新增最多", topBy(space, (row) => row.delta), `${Math.round(topBy(space, (row) => row.delta)?.delta || 0)}万`, "green")
       ],
       companies: space,
-      data: { spaceRows: spaceSource.detailRows },
+      data: { spaceRows },
       sourceIds: sourceForPage("space")
     })
   );
@@ -1331,6 +1392,8 @@ export function buildReport(input: BuildInput): Report {
         .filter((value): value is number => typeof value === "number");
       return values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
     })();
+  const complaintScore = complaintSummary?.score ?? avg(complaintRows, "secondary");
+  const complaintCompletion = complaintCompletionSource.summary;
   pages.push(
     makePage({
       id: "complaints",
@@ -1342,27 +1405,45 @@ export function buildReport(input: BuildInput): Report {
       metrics: [
         metric("集团投诉率", fmtPct(complaintGroupRate), "blue", residentTotal ? `${Math.round(complaintTotal)} / ${Math.round(residentTotal)}户` : undefined),
         metric("投诉率同比", fmtPp(complaintRateDelta), Number(complaintRateDelta || 0) <= 0 ? "green" : "red"),
-        metric("处理满意度", fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary")), "blue"),
-        metric("7-10分占比", fmtPct(complaintHighShare), "green")
+        input.month === 6
+          ? metric("6月投诉完成率", fmtPct(complaintCompletion), Number(complaintCompletion || 0) >= 80 ? "green" : "blue")
+          : metric("7-10分占比", fmtPct(complaintHighShare), "green"),
+        metric("处理满意度", fmtHundredScore(complaintScore), "blue")
       ],
       keyCompanies: [
         key("投诉率最高", topBy(complaintRows, (row) => row.current), fmtPct(topBy(complaintRows, (row) => row.current)?.current), "red"),
-        key("满意度最低", bottomBy(complaintRows, (row) => row.secondary), fmtScore(bottomBy(complaintRows, (row) => row.secondary)?.secondary), "red"),
+        key("满意度最低", bottomBy(complaintRows, (row) => row.secondary), fmtHundredScore(bottomBy(complaintRows, (row) => row.secondary)?.secondary), "red"),
         key("低分占比最高", {
           company: [...complaintScoreSource.rows].sort((left, right) => Number(right.lowShare || 0) - Number(left.lowShare || 0))[0]?.company || "--",
           current: [...complaintScoreSource.rows].sort((left, right) => Number(right.lowShare || 0) - Number(left.lowShare || 0))[0]?.lowShare ?? null
         }, fmtPct([...complaintScoreSource.rows].sort((left, right) => Number(right.lowShare || 0) - Number(left.lowShare || 0))[0]?.lowShare), "red")
       ],
       companies: complaintRows,
-      data: { satisfactionRows: complaintScoreSource.rows },
+      data: {
+        satisfactionRows: complaintScoreSource.rows,
+        complaintCompletionSummary: complaintCompletion
+      },
       bullets: [
-        `${input.year}年${input.month}月集团投诉率${fmtPct(complaintGroupRate)}${residentTotal ? `（投诉${Math.round(complaintTotal)}件，常驻${Math.round(residentTotal)}户）` : ""}，同比${fmtPp(complaintRateDelta)}；处理满意度${fmtScore(complaintSummary?.score ?? avg(complaintRows, "secondary"))}。`,
+        `${input.year}年${input.month}月集团投诉率${fmtPct(complaintGroupRate)}${residentTotal ? `（投诉${Math.round(complaintTotal)}件，常驻${Math.round(residentTotal)}户）` : ""}，同比${fmtPp(complaintRateDelta)}；${input.month === 6 ? `6月投诉完成率${fmtPct(complaintCompletion)}，` : ""}处理满意度${fmtHundredScore(complaintScore)}。`,
         `${topBy(complaintRows, (row) => row.current)?.company || "—"}投诉率最高，${bottomBy(complaintRows, (row) => row.secondary)?.company || "—"}满意度最低，需结合低分占比重点跟进。`
       ],
-      sourceIds: sourceForPage("complaints")
+      sourceIds: input.month === 6
+        ? ["src-complaints", "src-complaints-completion"]
+        : sourceForPage("complaints")
     })
   );
   sources.push(source("src-complaints", "complaints", "投诉管理", "analysis", input.files.analysis, "投诉评分", "A98:M112"));
+  if (input.month === 6) {
+    sources.push(source("src-complaints-completion", "complaints", "6月投诉完成率", "analysis", input.files.analysis, "投诉完成率", "A3:G17"));
+    if (complaintCompletion == null || complaintCompletionSource.values.size === 0) {
+      validation.push({
+        id: "missing-complaint-completion",
+        severity: "error",
+        pageId: "complaints",
+        message: "投诉管理缺少6月投诉完成率，请检查“投诉完成率”工作表6月列。"
+      });
+    }
+  }
   if (input.files.resident) {
     sources.push(source("src-complaints-resident", "complaints", "常驻户数", "resident", input.files.resident, "Sheet1", "A1:B15"));
   }

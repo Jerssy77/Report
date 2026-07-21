@@ -171,4 +171,37 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 3. Both tables contain all 13 companies and sort independently by completion rate, with no duplicated completion-rate columns.
 4. Browser inspection at the desktop preview confirmed the paired headers, KPI bands, company rows, rate bars, conclusions, and footer fit inside the 16:9 slide without overlap.
 
+## Complaint completion and hundred-point satisfaction
+
+- Source: `data/reports/2026-06/source/analysis.xlsx`, sheet `投诉完成率`, June column `G`.
+- Visual comparison: `qa-final-comparison.png`, middle row (annotated reference on the left, deployed implementation on the right).
+
+### Verification
+
+1. The complaint table now includes the June completion rate for every company and the group row; the cached group value is 71.5%.
+2. Satisfaction scores are converted from the workbook's ten-point values to direct hundred-point integers, for example `9.5 -> 95`, with no unit suffix or decimal.
+3. The left table remains a single aligned grid with five readable columns; the right score-distribution panel uses the same integer score convention.
+4. May retains its historical complaint layout and does not display June completion values.
+
+## Space group row and action summary
+
+- Source: `data/reports/2026-06/source/brief.xlsx`, sheet `空间资源`, cached group total row.
+- Visual comparison: `qa-final-comparison.png`, top row.
+
+### Verification
+
+1. The four-item year strip was removed and replaced by one compact group summary: booked 3,742万, forecast 6,888万, completion 87.9%, gap -949万.
+2. A visually separated group row is fixed below all 13 company rows and uses the workbook's cached total rather than a second client-side sum.
+3. The conclusion names the largest gap companies and the largest pending-renewal companies, so the page ends with an actionable follow-up list.
+4. The extra group row fits inside the 16:9 slide without overlap; labels, bars, conclusions, logo, and footer remain readable at 1920 x 1080.
+
+## Efficiency comparison periods
+
+- Visual comparison: `qa-final-comparison.png`, bottom row.
+
+### Verification
+
+1. Both efficiency charts now label their comparison series as `25年1-6月` and `26年1-6月`.
+2. Browser inspection found two instances of each period label, one per chart, with no legend collision or clipping.
+
 final result: passed
