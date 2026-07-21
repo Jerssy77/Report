@@ -3934,6 +3934,13 @@ button:disabled {
   font-weight: 700;
 }
 
+.complaint-bar-cell.count-value strong {
+  left: auto;
+  right: 0.2cqw;
+  min-width: 3.8cqw;
+  text-align: right;
+}
+
 .complaint-score-value {
   justify-self: center;
   color: #0b3f87;

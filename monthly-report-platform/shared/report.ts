@@ -104,6 +104,8 @@ export interface SatisfactionScoreRow {
   company: string;
   bins: number[];
   total: number | null;
+  previousTotal?: number | null;
+  totalDelta?: number | null;
   score: number | null;
   lowShare: number | null;
   highShare: number | null;

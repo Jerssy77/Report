@@ -39,4 +39,35 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 3. Post-fix evidence: the same-size side-by-side capture shows matching layout
    density and structure across the full page and the chart region.
 
+## Repair satisfaction redesign
+
+- Source visual truth: `C:/Users/jerse/AppData/Local/Temp/codex-clipboard-a3cc7ced-8885-4a88-b576-e7689ab799f4.png`
+- Implementation screenshot: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-repair-slide-final.png`
+- Full comparison: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-repair-comparison.png`
+- Focused comparison: `C:/Users/jerse/Documents/月报/monthly-report-platform/qa-repair-left-comparison.png`
+- Browser viewport: 1720 x 1200
+- State: 2026-06, page 09 (repair satisfaction)
+- Primary interaction: opened the report and selected page 09 from the page navigation.
+
+### Findings and comparison history
+
+1. Initial implementation matched the complaint-management two-column structure,
+   but four-digit volume labels extended into the comparison column (P2).
+2. Fix: report volumes now use integer formatting and a fixed right-aligned value
+   slot inside the bar column.
+3. Post-fix evidence: the focused comparison shows separate, readable columns for
+   company, report volume, period change, and satisfaction, including the group row.
+4. No remaining P0/P1/P2 findings. The left table, right satisfaction distribution,
+   conclusion area, logo, header, and footer follow the reference structure.
+
+### Required fidelity surfaces
+
+- Typography: Microsoft YaHei hierarchy and chart-label sizing remain consistent.
+- Layout rhythm: the 52/48 two-column grid, 14-row table, conclusion block, and
+  footer align with the complaint-management reference.
+- Colors: blue bars, red/green period-change semantics, and risk outlines match.
+- Assets: the original Century Golden Resources Service logo is unchanged and sharp.
+- Copy: repair-specific labels and conclusions replace complaint-specific language;
+  data is sourced from the June analysis workbook.
+
 final result: passed

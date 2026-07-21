@@ -109,6 +109,11 @@ function fmtAmount(value: number | null | undefined, digits = 0) {
   return `${value.toFixed(digits)}万`;
 }
 
+function fmtCount(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${Math.round(value).toLocaleString("zh-CN")}件`;
+}
+
 function sortCompanies(rows: CompanyMetric[]) {
   return [...rows].sort((a, b) => {
     const ai = STANDARD_COMPANY_ORDER.indexOf(a.company);
@@ -596,6 +601,8 @@ function scoreDistributionData(
         residentHouseholds: households,
         complaintRate: null
       }),
+      previousTotal: prior?.total ?? null,
+      totalDelta: ratioChange(current?.total ?? null, prior?.total ?? null),
       scoreDelta: current?.score != null && prior?.score != null ? current.score - prior.score : null,
       complaintRateDelta:
         households && current?.total != null && prior?.total != null
@@ -608,6 +615,8 @@ function scoreDistributionData(
   const normalizedSummary = summary
     ? {
         ...summary,
+        previousTotal: previousSummary?.total ?? null,
+        totalDelta: ratioChange(summary.total, previousSummary?.total ?? null),
         scoreDelta:
           summary.score != null && previousSummary?.score != null
             ? summary.score - previousSummary.score
@@ -802,11 +811,12 @@ export function buildReport(input: BuildInput): Report {
   const repairRows = completeCompanyMetrics(
     repairScoreSource.rows.map((row) => ({
       company: row.company,
-      current: row.score ?? null,
-      delta: row.scoreDelta ?? null,
-      secondary: row.highShare ?? null,
+      current: row.total ?? null,
+      previous: row.previousTotal ?? null,
+      delta: row.totalDelta ?? null,
+      secondary: row.score ?? null,
       target: row.lowShare ?? null,
-      amount: row.total ?? null
+      amount: row.highShare ?? null
     }))
   );
   const complaintRows = completeCompanyMetrics(
@@ -1105,7 +1115,11 @@ export function buildReport(input: BuildInput): Report {
   }
 
   const repairSummary = repairScoreSource.summary;
-  const repairHighShare = repairSummary?.highShare ?? avg(repairRows, "secondary");
+  const repairTotal = repairSummary?.total ?? sum(repairRows, "current");
+  const repairPreviousTotal = repairSummary?.previousTotal ?? sum(repairRows, "previous");
+  const repairTotalDelta = repairSummary?.totalDelta ?? ratioChange(repairTotal, repairPreviousTotal);
+  const repairScore = repairSummary?.score ?? avg(repairRows, "secondary");
+  const repairHighShare = repairSummary?.highShare ?? avg(repairRows, "amount");
   const repairLowShare = repairSummary?.lowShare ?? avg(repairRows, "target");
   pages.push(
     makePage({
@@ -1113,23 +1127,24 @@ export function buildReport(input: BuildInput): Report {
       order: 9,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "入户维修满意度",
-      chartTitle: "入户维修满意度与响应及时率",
-      kind: "quadrant",
+      chartTitle: "报事量与入户维修满意度",
+      kind: "dual-table",
       metrics: [
-        metric("集团满意度", fmtScore(repairSummary?.score ?? avg(repairRows, "current")), "blue"),
-        metric("7-10分占比", fmtPct(repairHighShare), "green"),
-        metric("1-6分占比", fmtPct(repairLowShare), Number(repairLowShare || 0) > 5 ? "red" : "blue")
+        metric("集团报事量", fmtCount(repairTotal), "blue"),
+        metric("报事量同比", fmtPp(repairTotalDelta), Number(repairTotalDelta || 0) <= 0 ? "green" : "red"),
+        metric("集团满意度", fmtScore(repairScore), "blue"),
+        metric("7-10分占比", fmtPct(repairHighShare), "green")
       ],
       keyCompanies: [
-        key("满意度最高", topBy(repairRows, (row) => row.current), fmtScore(topBy(repairRows, (row) => row.current)?.current), "blue"),
-        key("满意度最低", bottomBy(repairRows, (row) => row.current), fmtScore(bottomBy(repairRows, (row) => row.current)?.current), "red"),
+        key("报事量最高", topBy(repairRows, (row) => row.current), fmtCount(topBy(repairRows, (row) => row.current)?.current), "red"),
+        key("满意度最低", bottomBy(repairRows, (row) => row.secondary), fmtScore(bottomBy(repairRows, (row) => row.secondary)?.secondary), "red"),
         key("低分占比最高", topBy(repairRows, (row) => row.target), fmtPct(topBy(repairRows, (row) => row.target)?.target), "red")
       ],
       companies: repairRows,
       data: { satisfactionRows: repairScoreSource.rows },
       bullets: [
-        `${input.year}年${input.month}月入户维修集团满意度${fmtScore(repairSummary?.score ?? avg(repairRows, "current"))}，7-10分占比${fmtPct(repairHighShare)}，1-6分占比${fmtPct(repairLowShare)}。`,
-        `满意度最高为${topBy(repairRows, (row) => row.current)?.company || "--"}，最低为${bottomBy(repairRows, (row) => row.current)?.company || "--"}，需重点关注低分占比较高公司。`
+        `${input.year}年${input.month}月入户维修集团报事量${fmtCount(repairTotal)}，同比${fmtPp(repairTotalDelta)}；满意度${fmtScore(repairScore)}，7-10分占比${fmtPct(repairHighShare)}。`,
+        `${topBy(repairRows, (row) => row.current)?.company || "—"}报事量最高，${bottomBy(repairRows, (row) => row.secondary)?.company || "—"}满意度最低，需结合低分占比重点跟进。`
       ],
       sourceIds: sourceForPage("repair")
     })

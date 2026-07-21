@@ -83,7 +83,7 @@ type ChartValueFormat = "pct" | "score" | "number";
 
 function chartValueText(value: number | null | undefined, format: ChartValueFormat = "pct") {
   if (format === "score") return scoreText(value);
-  if (format === "number") return plainNumber(value);
+  if (format === "number") return plainNumber(value, 0);
   return pct(value);
 }
 
@@ -927,16 +927,60 @@ function ScoreRankList({ rows, limit = 14, valueLabel = "得分 / 权重" }: { r
 }
 
 function RepairSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
+  const rows = sortedBy(page.companies, "current");
+  const reportAverage = average(page.companies, "current") ?? 0;
+  const reportTotal = page.companies.reduce((sum, row) => sum + numeric(row.current), 0);
+  const previousTotal = page.companies.reduce((sum, row) => sum + numeric(row.previous), 0);
+  const reportDelta = previousTotal ? ((reportTotal - previousTotal) / previousTotal) * 100 : null;
+  const satisfactionAverage = average(page.companies, "secondary") ?? 0;
+  const reportMax = Math.max(1, Math.ceil(Math.max(...rows.map((row) => numeric(row.current)), reportAverage)));
+  const satisfactionBottomSet = new Set(
+    [...rows]
+      .sort((left, right) => numeric(left.secondary) - numeric(right.secondary))
+      .slice(0, 3)
+      .map((row) => row.company)
+  );
   const satisfactionRows = page.data?.satisfactionRows || [];
+  const tableRows = [
+    ...rows,
+    {
+      company: "集团",
+      current: reportTotal,
+      delta: reportDelta,
+      secondary: satisfactionAverage
+    }
+  ];
   return (
-    <main className="ppt-body repair-layout">
-      <section className="repair-grid satisfaction-single">
+    <main className="ppt-body complaints-layout ppt-complaints-reference">
+      <section className="complaints-dashboard-grid">
+        <div className="complaint-table-panel compact">
+          <div className="complaint-table rate-only">
+            <div className="complaint-row complaint-head">
+              <strong>公司</strong>
+              <strong>报事量</strong>
+              <strong>同比</strong>
+              <strong>满意度</strong>
+            </div>
+            {tableRows.map((row) => {
+              const isTotal = row.company === "集团";
+              const satisfactionRisk = !isTotal && satisfactionBottomSet.has(row.company);
+              return (
+                <div className={isTotal ? "complaint-row total" : "complaint-row"} key={row.company}>
+                  <span className={satisfactionRisk ? "complaint-company risk" : "complaint-company"}>{row.company}</span>
+                  <ComplaintBarCell value={row.current} benchmark={reportAverage} max={reportMax} format="number" />
+                  <em className={deltaClass(row.delta, true)}>{pp(row.delta)}</em>
+                  <strong className="complaint-score-value">{scoreText(row.secondary)}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <div className="ppt-chart-card">
           <h2>入户维修满意度分值与评分结构</h2>
           <SatisfactionMixChart rows={satisfactionRows} />
         </div>
       </section>
-      <InsightList page={page} copy={copy} compact />
+      <ComplaintInsightList page={page} copy={copy} />
     </main>
   );
 }
@@ -1131,7 +1175,10 @@ function ComplaintBarCell({
   const width = `${clampPercent(Number(value || 0), safeMax) / safeMax * 100}%`;
   const markerLeft = `${clampPercent(benchmark, safeMax) / safeMax * 100}%`;
   return (
-    <div className="complaint-bar-cell" style={{ "--bar-label-left": width } as CSSProperties}>
+    <div
+      className={format === "number" ? "complaint-bar-cell count-value" : "complaint-bar-cell"}
+      style={{ "--bar-label-left": width } as CSSProperties}
+    >
       <span className={`complaint-marker ${tone}`} style={{ left: markerLeft }} />
       <span className="complaint-bar" style={{ width }} />
       <strong>{chartValueText(value, format)}</strong>
