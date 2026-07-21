@@ -120,4 +120,19 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 4. Visual inspection confirmed the existing two-column layout, typography,
    bar lengths, conclusion area, header, logo, and footer remain unchanged.
 
+## Fee-rate project split data correction
+
+- Source workbook: `data/reports/2026-06/source/brief.xlsx`
+- Current fee source: `当期-费项`, self-built block `A1:AG21`, external block `A24:AG44`.
+- Arrears source: `历欠-账龄`, self-built block `A1:AI21`, external block `A24:AI44`.
+- The displayed values now come from each block's rightmost `合计` columns:
+  current rate, prior-year rate, and year-over-year rate change.
+
+### Verification
+
+1. Current fee page: self-built total 83.1%, external total 61.2%; both charts contain 13 companies.
+2. Arrears page: self-built total 29.4%, external total 17.5%; both charts contain 13 companies.
+3. Browser verification confirmed page 02 and page 04 headings are `自建项目` and `外拓项目`, and all chart values remain sorted by year-over-year change.
+4. May and June workbooks both parse without validation errors. Missing self-built/external blocks or totals now create blocking validation errors instead of silently displaying the wrong fee category.
+
 final result: passed

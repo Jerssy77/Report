@@ -273,38 +273,46 @@ function overallCompanies(filePath: string | undefined, mode: "current" | "arrea
   return { companies: sortCompanies(uniqueCompanies(companyRows)), summary };
 }
 
-function splitCompanies(filePath: string | undefined, sheetName: string, firstLabel: string, secondLabel: string) {
-  const rows = workbookRows(filePath, sheetName).slice(5);
-  const left = sortCompanies(
-    uniqueCompanies(
-      rows
-      .map((row) => ({
-        company: str(row[0]),
-        current: pct(row[3]),
-        previous: pct(row[6]),
-        delta: pp(row[8]),
-        category: firstLabel
-      }))
-    )
+function projectTotalSection(rows: Rows, titleKeyword: string, category: string) {
+  const titleIndex = rows.findIndex((row) => row.some((cell) => str(cell).includes(titleKeyword)));
+  if (titleIndex < 0) return { companies: [] as CompanyMetric[], summary: undefined as CompanyMetric | undefined };
+
+  const headerIndex = rows.findIndex(
+    (row, index) => index > titleIndex && str(row[0]) === "公司" && row.some((cell) => str(cell) === "合计")
   );
-  const right = sortCompanies(
-    uniqueCompanies(
-      rows
-      .map((row) => ({
-        company: str(row[0]),
-        current: pct(row[11]),
-        previous: pct(row[14]),
-        delta: pp(row[16]),
-        category: secondLabel
-      }))
-    )
-  );
-  const merged = left.map((row) => ({
-    ...row,
-    secondary: right.find((item) => item.company === row.company)?.current ?? null,
-    category: `${firstLabel}/${secondLabel}`
-  }));
-  return { left: merged, right };
+  if (headerIndex < 0) return { companies: [] as CompanyMetric[], summary: undefined as CompanyMetric | undefined };
+
+  const totalStart = rows[headerIndex].findIndex((cell) => str(cell) === "合计");
+  if (totalStart < 0) return { companies: [] as CompanyMetric[], summary: undefined as CompanyMetric | undefined };
+
+  const companies: CompanyMetric[] = [];
+  let summary: CompanyMetric | undefined;
+  for (const row of rows.slice(headerIndex + 1)) {
+    const company = str(row[0]);
+    if (!company) continue;
+    const item: CompanyMetric = {
+      company,
+      amount: num(row[totalStart + 1]),
+      current: pct(row[totalStart + 2]),
+      previous: pct(row[totalStart + 5]),
+      delta: pp(row[totalStart + 7]),
+      category
+    };
+    if (company === "合计" || company === "总计") {
+      summary = { ...item, company: "集团" };
+      break;
+    }
+    if (isCompanyName(company)) companies.push(item);
+  }
+
+  return { companies: sortCompanies(uniqueCompanies(companies)), summary };
+}
+
+function projectTotalCompanies(filePath: string | undefined, sheetName: string) {
+  const rows = workbookRows(filePath, sheetName);
+  const selfBuilt = projectTotalSection(rows, "自建", "自建项目");
+  const external = projectTotalSection(rows, "外拓", "外拓项目");
+  return { selfBuilt, external };
 }
 
 function clearanceCompanies(filePath?: string) {
@@ -692,8 +700,10 @@ function generatedBullets(page: ReportPage) {
   if (page.id === "current-split" || page.id === "arrears-split") {
     const leftLabel = page.data?.splitLeftTitle || page.metrics[0]?.label || "左侧项目";
     const rightLabel = page.data?.splitRightTitle || page.metrics[2]?.label || "右侧项目";
+    const leftMetricLabel = page.metrics[0]?.label || `${leftLabel}合计`;
+    const rightMetricLabel = page.metrics[2]?.label || `${rightLabel}合计`;
     return [
-      `${leftLabel}均值${page.metrics[0]?.value || "—"}，${rightLabel}均值${page.metrics[2]?.value || "—"}；${max?.company || "—"}${fmtPct(max?.current)}居${leftLabel}首位。`,
+      `${leftMetricLabel}${page.metrics[0]?.value || "—"}，${rightMetricLabel}${page.metrics[2]?.value || "—"}；${max?.company || "—"}${fmtPct(max?.current)}居${leftLabel}首位。`,
       `${min?.company || "—"}${fmtPct(min?.current)}处于低位；${improved?.company || "—"}同比${fmtPp(improved?.delta)}，改善最明显。`
     ];
   }
@@ -862,25 +872,33 @@ export function buildReport(input: BuildInput): Report {
   );
   sources.push(source("src-current-overview", "current-overview", "当期收费率", "brief", input.files.brief, "整体", "A6:I35"));
 
-  const currentSplit = splitCompanies(input.files.brief, "当期-费项", "直收项", "代收项");
-  const currentSplitLeft = currentSplit.left;
-  const currentSplitRight = currentSplit.right;
+  const currentSplit = projectTotalCompanies(input.files.brief, "当期-费项");
+  const currentSplitLeft = currentSplit.selfBuilt.companies;
+  const currentSplitRight = currentSplit.external.companies;
+  if (!currentSplitLeft.length || !currentSplitRight.length || !currentSplit.selfBuilt.summary || !currentSplit.external.summary) {
+    validation.push({
+      id: "invalid-current-project-totals",
+      severity: "error",
+      pageId: "current-split",
+      message: "当期收费率缺少自建或外拓表的合计数据，请检查“当期-费项”工作表。"
+    });
+  }
   pages.push(
     makePage({
       id: "current-split",
       order: 2,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "当期收费率",
-      chartTitle: "自建项目与代收项收费率对比",
+      chartTitle: "自建项目与外拓项目当期收费率对比",
       kind: "split-bars",
       metrics: [
-        metric("自建直收均值", fmtPct(avg(currentSplitLeft, "current")), "blue"),
-        metric("直收同比", fmtPp(avg(currentSplitLeft, "delta")), Number(avg(currentSplitLeft, "delta") || 0) >= 0 ? "green" : "red"),
-        metric("代收项均值", fmtPct(avg(currentSplitRight, "current")), "blue")
+        metric("自建项目合计", fmtPct(currentSplit.selfBuilt.summary?.current), "blue"),
+        metric("自建项目同比", fmtPp(currentSplit.selfBuilt.summary?.delta), Number(currentSplit.selfBuilt.summary?.delta || 0) >= 0 ? "green" : "red"),
+        metric("外拓项目合计", fmtPct(currentSplit.external.summary?.current), "blue")
       ],
       keyCompanies: [
-        key("直收最高", topBy(currentSplitLeft, (row) => row.current), fmtPct(topBy(currentSplitLeft, (row) => row.current)?.current), "blue"),
-        key("直收最低", bottomBy(currentSplitLeft, (row) => row.current), fmtPct(bottomBy(currentSplitLeft, (row) => row.current)?.current), "red"),
+        key("自建最高", topBy(currentSplitLeft, (row) => row.current), fmtPct(topBy(currentSplitLeft, (row) => row.current)?.current), "blue"),
+        key("自建最低", bottomBy(currentSplitLeft, (row) => row.current), fmtPct(bottomBy(currentSplitLeft, (row) => row.current)?.current), "red"),
         key("改善最大", topBy(currentSplitLeft, (row) => row.delta), fmtPp(topBy(currentSplitLeft, (row) => row.delta)?.delta), "green")
       ],
       companies: currentSplitLeft,
@@ -889,7 +907,7 @@ export function buildReport(input: BuildInput): Report {
       sourceIds: sourceForPage("current-split")
     })
   );
-  sources.push(source("src-current-split", "current-split", "当期收费率拆分", "brief", input.files.brief, "当期-费项", "A6:Q43"));
+  sources.push(source("src-current-split", "current-split", "当期收费率拆分", "brief", input.files.brief, "当期-费项", "A1:AG44"));
 
   const arrearsMax = topBy(arrears.companies, (row) => row.current);
   const arrearsMin = bottomBy(arrears.companies, (row) => row.current);
@@ -918,34 +936,42 @@ export function buildReport(input: BuildInput): Report {
   );
   sources.push(source("src-arrears-overview", "arrears-overview", "历欠收费率", "brief", input.files.brief, "整体", "J6:Q35"));
 
-  const arrearsSplit = splitCompanies(input.files.brief, "历欠-账龄", "1年以内", "2-3年");
-  const arrearsSplitLeft = arrearsSplit.left;
-  const arrearsSplitRight = arrearsSplit.right;
+  const arrearsSplit = projectTotalCompanies(input.files.brief, "历欠-账龄");
+  const arrearsSplitLeft = arrearsSplit.selfBuilt.companies;
+  const arrearsSplitRight = arrearsSplit.external.companies;
+  if (!arrearsSplitLeft.length || !arrearsSplitRight.length || !arrearsSplit.selfBuilt.summary || !arrearsSplit.external.summary) {
+    validation.push({
+      id: "invalid-arrears-project-totals",
+      severity: "error",
+      pageId: "arrears-split",
+      message: "历欠收费率缺少自建或外拓表的合计数据，请检查“历欠-账龄”工作表。"
+    });
+  }
   pages.push(
     makePage({
       id: "arrears-split",
       order: 4,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "历欠收费率",
-      chartTitle: "按账龄拆分回款率对比",
+      chartTitle: "自建项目与外拓项目历欠收费率对比",
       kind: "split-bars",
       metrics: [
-        metric("1年以内均值", fmtPct(avg(arrearsSplitLeft, "current")), "blue"),
-        metric("同比", fmtPp(avg(arrearsSplitLeft, "delta")), Number(avg(arrearsSplitLeft, "delta") || 0) >= 0 ? "green" : "red"),
-        metric("2-3年均值", fmtPct(avg(arrearsSplitRight, "current")), "blue")
+        metric("自建项目合计", fmtPct(arrearsSplit.selfBuilt.summary?.current), "blue"),
+        metric("自建项目同比", fmtPp(arrearsSplit.selfBuilt.summary?.delta), Number(arrearsSplit.selfBuilt.summary?.delta || 0) >= 0 ? "green" : "red"),
+        metric("外拓项目合计", fmtPct(arrearsSplit.external.summary?.current), "blue")
       ],
       keyCompanies: [
-        key("1年内最高", topBy(arrearsSplitLeft, (row) => row.current), fmtPct(topBy(arrearsSplitLeft, (row) => row.current)?.current), "blue"),
-        key("1年内最低", bottomBy(arrearsSplitLeft, (row) => row.current), fmtPct(bottomBy(arrearsSplitLeft, (row) => row.current)?.current), "red"),
+        key("自建最高", topBy(arrearsSplitLeft, (row) => row.current), fmtPct(topBy(arrearsSplitLeft, (row) => row.current)?.current), "blue"),
+        key("自建最低", bottomBy(arrearsSplitLeft, (row) => row.current), fmtPct(bottomBy(arrearsSplitLeft, (row) => row.current)?.current), "red"),
         key("改善最大", topBy(arrearsSplitLeft, (row) => row.delta), fmtPp(topBy(arrearsSplitLeft, (row) => row.delta)?.delta), "green")
       ],
       companies: arrearsSplitLeft,
       secondaryCompanies: arrearsSplitRight,
-      data: { splitLeftTitle: "1年以内", splitRightTitle: "2-3年" },
+      data: { splitLeftTitle: "自建项目", splitRightTitle: "外拓项目" },
       sourceIds: sourceForPage("arrears-split")
     })
   );
-  sources.push(source("src-arrears-split", "arrears-split", "历欠收费率拆分", "brief", input.files.brief, "历欠-账龄", "A6:Q43"));
+  sources.push(source("src-arrears-split", "arrears-split", "历欠收费率拆分", "brief", input.files.brief, "历欠-账龄", "A1:AI44"));
 
   const clearanceSource = clearanceData(input.files.brief);
   const clearance = clearanceSource.metrics;
