@@ -4679,18 +4679,24 @@ button:disabled {
   font-size: 0.92cqw;
 }
 
-.complaints-dashboard-grid .complaint-company.risk,
-.complaints-dashboard-grid .satisfaction-mix-row.decline-bottom > span {
+.complaints-dashboard-grid .complaint-company,
+.complaints-dashboard-grid .satisfaction-mix-row > span {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  justify-self: center;
+  justify-content: flex-start;
+  justify-self: start;
   width: max-content;
   min-width: 0;
   padding: 0.04cqw 0.18cqw;
-  border: 1.5px dashed #e60012;
+  border: 1.5px solid transparent;
   border-radius: 0.16cqw;
   line-height: 1.05;
+}
+
+.complaints-dashboard-grid .complaint-company.risk,
+.complaints-dashboard-grid .satisfaction-mix-row.decline-bottom > span {
+  border-color: #e60012;
+  border-style: dashed;
 }
 
 .slide-footer {

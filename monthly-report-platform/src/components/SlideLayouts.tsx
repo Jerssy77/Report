@@ -107,7 +107,8 @@ function VerticalBarChart({
   currentLabel,
   target,
   invertDelta = false,
-  compact = false
+  compact = false,
+  sortKey = "current"
 }: {
   rows: CompanyMetric[];
   previousLabel: string;
@@ -115,8 +116,9 @@ function VerticalBarChart({
   target?: number | null;
   invertDelta?: boolean;
   compact?: boolean;
+  sortKey?: keyof CompanyMetric;
 }) {
-  const chartRows = sortedBy(rows, "current");
+  const chartRows = sortedBy(rows, sortKey);
   const averageValue = average(chartRows, "current");
   const numericValues = chartRows
     .flatMap((row) => [row.previous, row.current])
@@ -342,7 +344,7 @@ function OverviewBarsSlide({ page, copy }: { page: ReportPage; copy: PageCopy })
       </section>
       <section className="ppt-chart-card large">
         <h2>{page.chartTitle.replace("各公司", "")}</h2>
-        <VerticalBarChart rows={page.companies} previousLabel="2025年" currentLabel="2026年" target={target} invertDelta={invert} />
+        <VerticalBarChart rows={page.companies} previousLabel="2025年" currentLabel="2026年" target={target} invertDelta={invert} sortKey="delta" />
       </section>
       <InsightList page={page} copy={copy} />
     </main>
@@ -357,11 +359,11 @@ function SplitTwoChartsSlide({ page, copy }: { page: ReportPage; copy: PageCopy 
       <section className="ppt-split-grid">
         <div className="ppt-chart-card">
           <h2>{page.data?.splitLeftTitle || "自建项目"}</h2>
-          <VerticalBarChart rows={leftRows} previousLabel="2025年" currentLabel="2026年" compact />
+          <VerticalBarChart rows={leftRows} previousLabel="2025年" currentLabel="2026年" compact sortKey="delta" />
         </div>
         <div className="ppt-chart-card">
           <h2>{page.data?.splitRightTitle || "外拓项目"}</h2>
-          <VerticalBarChart rows={rightRows} previousLabel="2025年" currentLabel="2026年" compact />
+          <VerticalBarChart rows={rightRows} previousLabel="2025年" currentLabel="2026年" compact sortKey="delta" />
         </div>
       </section>
       <InsightList page={page} copy={copy} compact />

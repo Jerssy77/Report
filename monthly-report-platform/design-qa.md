@@ -102,4 +102,22 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 - Assets: the supplied brand logo and header treatment are unchanged.
 - Copy: complaint and repair terminology, values, and conclusions remain source-backed.
 
+## Company alignment and fee-rate sorting pass
+
+- State: 2026-06, pages 01-04 and 09-10, desktop preview at 1720 x 1200.
+- Interaction: selected each report page from the page navigation and inspected the rendered chart order and company-label geometry.
+
+### Findings and verification
+
+1. Fee-rate pages 01-04 now sort every chart independently by year-over-year
+   change from highest to lowest. Browser evidence confirmed monotonic descending
+   deltas on both overview pages and on both columns of each split page.
+2. Complaint and repair company labels now reserve identical transparent border
+   and padding space in normal rows. Risk rows only change border color/style to
+   the compact red dashed treatment, so the text never shifts horizontally.
+3. Geometry verification found one shared x position for every company name in
+   each column: 63.23 px on the left and 709.94 px on the right at the QA viewport.
+4. Visual inspection confirmed the existing two-column layout, typography,
+   bar lengths, conclusion area, header, logo, and footer remain unchanged.
+
 final result: passed
