@@ -274,7 +274,7 @@ function overallCompanies(filePath: string | undefined, mode: "current" | "arrea
 }
 
 function projectTotalSection(rows: Rows, titleKeyword: string, category: string) {
-  const titleIndex = rows.findIndex((row) => row.some((cell) => str(cell).includes(titleKeyword)));
+  const titleIndex = rows.findIndex((row) => str(row[0]).includes(titleKeyword));
   if (titleIndex < 0) return { companies: [] as CompanyMetric[], summary: undefined as CompanyMetric | undefined };
 
   const headerIndex = rows.findIndex(
@@ -313,6 +313,87 @@ function projectTotalCompanies(filePath: string | undefined, sheetName: string) 
   const selfBuilt = projectTotalSection(rows, "自建", "自建项目");
   const external = projectTotalSection(rows, "外拓", "外拓项目");
   return { selfBuilt, external };
+}
+
+interface ProjectAmountRow {
+  company: string;
+  currentDue: number | null;
+  currentPaid: number | null;
+  previousDue: number | null;
+  previousPaid: number | null;
+}
+
+function projectAmountSection(rows: Rows, titleKeyword: string) {
+  const titleIndex = rows.findIndex((row) => str(row[0]).includes(titleKeyword));
+  if (titleIndex < 0) return [] as ProjectAmountRow[];
+  const headerIndex = rows.findIndex(
+    (row, index) => index > titleIndex && str(row[0]) === "公司" && row.some((cell) => str(cell) === "合计")
+  );
+  if (headerIndex < 0) return [] as ProjectAmountRow[];
+  const totalStart = rows[headerIndex].findIndex((cell) => str(cell) === "合计");
+  if (totalStart < 0) return [] as ProjectAmountRow[];
+
+  const result: ProjectAmountRow[] = [];
+  for (const row of rows.slice(headerIndex + 1)) {
+    const company = str(row[0]);
+    if (!company) continue;
+    if (isCompanyName(company) || company === "合计" || company === "总计") {
+      result.push({
+        company: company === "合计" || company === "总计" ? "集团" : company,
+        currentDue: num(row[totalStart]),
+        currentPaid: num(row[totalStart + 1]),
+        previousDue: num(row[totalStart + 3]),
+        previousPaid: num(row[totalStart + 4])
+      });
+    }
+    if (company === "合计" || company === "总计") break;
+  }
+  return result;
+}
+
+function combinedProjectTotalCompanies(filePath: string | undefined, sheetName: string) {
+  const rows = workbookRows(filePath, sheetName);
+  const cachedCombined = projectTotalSection(rows, "收费简报-合计", "自建+外拓");
+  if (cachedCombined.companies.length && cachedCombined.summary) return cachedCombined;
+
+  const totals = new Map<string, Omit<ProjectAmountRow, "company">>();
+  for (const item of [
+    ...projectAmountSection(rows, "收费简报-自建"),
+    ...projectAmountSection(rows, "收费简报-外拓")
+  ]) {
+    const existing = totals.get(item.company) || {
+      currentDue: null,
+      currentPaid: null,
+      previousDue: null,
+      previousPaid: null
+    };
+    const add = (left: number | null, right: number | null) =>
+      left == null && right == null ? null : (left || 0) + (right || 0);
+    totals.set(item.company, {
+      currentDue: add(existing.currentDue, item.currentDue),
+      currentPaid: add(existing.currentPaid, item.currentPaid),
+      previousDue: add(existing.previousDue, item.previousDue),
+      previousPaid: add(existing.previousPaid, item.previousPaid)
+    });
+  }
+
+  const metrics = [...totals.entries()].map(([company, amounts]) => {
+    const current = amounts.currentDue ? ((amounts.currentPaid || 0) / amounts.currentDue) * 100 : null;
+    const previous = amounts.previousDue ? ((amounts.previousPaid || 0) / amounts.previousDue) * 100 : null;
+    return {
+      company,
+      amount: amounts.currentPaid,
+      current,
+      previous,
+      delta: current != null && previous != null ? current - previous : null,
+      category: "自建+外拓"
+    } satisfies CompanyMetric;
+  });
+  const summary = metrics.find((row) => row.company === "集团");
+  return {
+    companies: sortCompanies(uniqueCompanies(metrics.filter((row) => row.company !== "集团"))),
+    summary
+  };
 }
 
 function clearanceCompanies(filePath?: string) {
@@ -810,7 +891,7 @@ export function buildReport(input: BuildInput): Report {
     validation.push({ id: "missing-analysis", severity: "error", message: "缺少数据分析 Excel。" });
   }
   const targets = targetsFromAnalysis(input.files.analysis);
-  const current = overallCompanies(input.files.brief, "current");
+  const current = combinedProjectTotalCompanies(input.files.brief, "当期-费项");
   const arrears = overallCompanies(input.files.brief, "arrears");
   const currentTargetAverage =
     current.companies.reduce((sum, row) => sum + (targets.get(row.company) || 0), 0) /
@@ -842,6 +923,14 @@ export function buildReport(input: BuildInput): Report {
   );
 
   const pages: ReportPage[] = [];
+  if (!current.companies.length || !current.summary) {
+    validation.push({
+      id: "invalid-current-combined-totals",
+      severity: "error",
+      pageId: "current-overview",
+      message: "当期收费率缺少自建+外拓合计数据，请检查“当期-费项”工作表中的“当期收费简报-合计”区块。"
+    });
+  }
   const currentMax = topBy(current.companies, (row) => row.current);
   const currentMin = bottomBy(current.companies, (row) => row.current);
   const currentImprove = topBy(current.companies, (row) => row.delta);
@@ -870,7 +959,7 @@ export function buildReport(input: BuildInput): Report {
       sourceIds: sourceForPage("current-overview")
     })
   );
-  sources.push(source("src-current-overview", "current-overview", "当期收费率", "brief", input.files.brief, "整体", "A6:I35"));
+  sources.push(source("src-current-overview", "current-overview", "当期收费率", "brief", input.files.brief, "当期-费项", "A47:AG67"));
 
   const currentSplit = projectTotalCompanies(input.files.brief, "当期-费项");
   const currentSplitLeft = currentSplit.selfBuilt.companies;

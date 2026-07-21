@@ -135,4 +135,16 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 3. Browser verification confirmed page 02 and page 04 headings are `自建项目` and `外拓项目`, and all chart values remain sorted by year-over-year change.
 4. May and June workbooks both parse without validation errors. Missing self-built/external blocks or totals now create blocking validation errors instead of silently displaying the wrong fee category.
 
+## Current fee overview combined-source correction
+
+- Primary June source: `当期-费项 A47:AG67`, the `当期收费简报-合计` block combining self-built and external projects.
+- Historical compatibility: when an older workbook has no combined block, the platform combines the self-built and external receivable/paid totals before deriving the rates.
+
+### Verification
+
+1. June group current fee rate is 77.4%, year-over-year change is -1.3%, and target completion is 87.2%.
+2. June company reconciliation includes Beijing 81.9% / -1.2%, Beicheng 75.6% / -4.5%, and Ningbo 74.5% / -5.3%.
+3. Page 01 contains all 13 companies and its source trace points to `当期-费项 A47:AG67`.
+4. May and June both build without validation errors; a missing combined source now blocks export instead of reverting to the unrelated `整体` table.
+
 final result: passed
