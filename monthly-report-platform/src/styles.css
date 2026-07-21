@@ -340,6 +340,28 @@ button:disabled {
   width: min(100%, 1220px);
 }
 
+.slide-preview-viewport {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.slide-preview-scale {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: top center;
+}
+
+.slide-preview-wrap .slide-preview-scale .slide-frame {
+  width: 1920px;
+  height: 1080px;
+}
+
 .source-trace {
   min-height: 34px;
   display: flex;

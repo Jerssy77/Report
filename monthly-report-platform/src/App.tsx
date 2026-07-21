@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import {
   AlertCircle,
@@ -271,7 +271,7 @@ export default function App() {
                   <ValidationStrip report={report} pageId={selectedPage.id} />
                 </div>
                 <div className="slide-preview-wrap">
-                  <SlideCanvas page={selectedPage} copy={copyDraft} updatedAt={report.updatedAt} />
+                  <SlidePreviewCanvas page={selectedPage} copy={copyDraft} updatedAt={report.updatedAt} />
                 </div>
                 <SourceTrace report={report} pageId={selectedPage.id} />
               </section>
@@ -354,6 +354,50 @@ export default function App() {
           </details>
         </section>
       </main>
+    </div>
+  );
+}
+
+const PREVIEW_SLIDE_WIDTH = 1920;
+const PREVIEW_SLIDE_HEIGHT = 1080;
+
+function SlidePreviewCanvas({
+  page,
+  copy,
+  updatedAt
+}: {
+  page: Report["pages"][number];
+  copy: PageCopy;
+  updatedAt: string;
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const updateScale = () => {
+      const availableWidth = viewport.getBoundingClientRect().width;
+      setScale(Math.min(1, availableWidth / PREVIEW_SLIDE_WIDTH));
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={viewportRef}
+      className="slide-preview-viewport"
+      style={{ height: scale ? PREVIEW_SLIDE_HEIGHT * scale : undefined }}
+    >
+      <div
+        className="slide-preview-scale"
+        style={{ transform: `translateX(-50%) scale(${scale || 1})`, visibility: scale ? "visible" : "hidden" }}
+      >
+        <SlideCanvas page={page} copy={copy} updatedAt={updatedAt} />
+      </div>
     </div>
   );
 }
