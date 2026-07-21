@@ -375,55 +375,62 @@ function ClearanceSlide({ page, copy }: { page: ReportPage; copy: PageCopy }) {
   const rows = page.data?.clearanceRows || [];
   return (
     <main className="ppt-body clearance-layout">
-      <section className="clearance-grid">
-        <table className="ppt-table clearance-table">
-          <thead>
-            <tr>
-              <th>公司</th>
-              <th>基础指标</th>
-              <th>实收金额</th>
-              <th>基础指标完成率</th>
-              <th>自建完成率</th>
-              <th>外拓完成率</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(0, 16).map((row) => (
-              <tr key={row.company}>
-                <td>{row.company}</td>
-                <td>{numberText(row.selfTarget)}</td>
-                <td>{numberText(row.selfCollected)}</td>
-                <td>{pct(row.selfRate)}</td>
-                <td>{pct(row.selfRate)}</td>
-                <td>{pct(row.externalRate)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="clearance-bars">
-          <TitledRatePanel title="基础指标完成率" rows={page.companies} valueKey="current" />
-          <TitledRatePanel title="外拓完成率" rows={page.companies} valueKey="secondary" />
-        </div>
+      <section className="clearance-category-grid">
+        <ClearanceCategoryPanel title="自建项目" rows={rows} category="self" />
+        <ClearanceCategoryPanel title="外拓项目" rows={rows} category="external" />
       </section>
       <InsightList page={page} copy={copy} compact />
     </main>
   );
 }
 
-function TitledRatePanel({
+function ClearanceCategoryPanel({
   title,
   rows,
-  valueKey
+  category
 }: {
   title: string;
-  rows: CompanyMetric[];
-  valueKey: keyof CompanyMetric;
+  rows: ClearanceRow[];
+  category: "self" | "external";
 }) {
+  const targetKey = category === "self" ? "selfTarget" : "externalTarget";
+  const collectedKey = category === "self" ? "selfCollected" : "externalCollected";
+  const rateKey = category === "self" ? "selfRate" : "externalRate";
+  const sortedRows = [...rows].sort((left, right) => numeric(right[rateKey]) - numeric(left[rateKey]));
+  const target = rows.reduce((sum, row) => sum + numeric(row[targetKey]), 0);
+  const collected = rows.reduce((sum, row) => sum + numeric(row[collectedKey]), 0);
+  const rate = target ? (collected / target) * 100 : 0;
   return (
-    <div className="rate-panel">
-      <h2>{title}</h2>
-      <HorizontalRateList rows={rows} valueKey={valueKey} />
-    </div>
+    <section className={`clearance-category-panel clearance-category-${category}`}>
+      <header className="clearance-category-head">
+        <h2>{title}</h2>
+        <div className="clearance-category-kpis">
+          <span>基础指标<strong>{numberText(Math.round(target))}万</strong></span>
+          <span>实收额<strong>{numberText(Math.round(collected))}万</strong></span>
+          <span>完成率<strong>{pct(rate)}</strong></span>
+        </div>
+      </header>
+      <table className="ppt-table clearance-category-table">
+        <thead>
+          <tr>
+            <th>公司</th>
+            <th>基础指标</th>
+            <th>实收额</th>
+            <th>完成率</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedRows.slice(0, 16).map((row) => (
+            <tr key={row.company}>
+              <td>{row.company}</td>
+              <td>{numberText(row[targetKey])}</td>
+              <td>{numberText(row[collectedKey])}</td>
+              <td><InlineRateBar value={numeric(row[rateKey])} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

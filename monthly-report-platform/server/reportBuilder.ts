@@ -802,9 +802,19 @@ function generatedBullets(page: ReportPage) {
   }
 
   if (page.id === "clearance") {
+    const rows = page.data?.clearanceRows || [];
+    const total = (keyName: keyof ClearanceRow) =>
+      rows.reduce((sum, row) => sum + (typeof row[keyName] === "number" ? Number(row[keyName]) : 0), 0);
+    const selfTarget = total("selfTarget");
+    const selfCollected = total("selfCollected");
+    const externalTarget = total("externalTarget");
+    const externalCollected = total("externalCollected");
+    const selfRate = selfTarget ? (selfCollected / selfTarget) * 100 : null;
+    const externalRate = externalTarget ? (externalCollected / externalTarget) * 100 : null;
+    const externalMax = topBy(page.companies, (row) => row.secondary);
     return [
-      `基础指标整体完成率${page.metrics[0]?.value || "—"}，自建回款${page.metrics[1]?.value || "—"}，外拓完成率${page.metrics[2]?.value || "—"}。`,
-      `${max?.company || "—"}${fmtPct(max?.current)}完成率最高，${min?.company || "—"}${fmtPct(min?.current)}最低，需聚焦低完成率项目回款。`
+      `自建基础指标${fmtAmount(selfTarget)}，实收${fmtAmount(selfCollected)}，完成率${fmtPct(selfRate)}；外拓基础指标${fmtAmount(externalTarget)}，实收${fmtAmount(externalCollected)}，完成率${fmtPct(externalRate)}。`,
+      `自建${max?.company || "—"}${fmtPct(max?.current)}完成率最高，${min?.company || "—"}${fmtPct(min?.current)}最低；外拓${externalMax?.company || "—"}${fmtPct(externalMax?.secondary)}最高。`
     ];
   }
 
@@ -1100,22 +1110,28 @@ export function buildReport(input: BuildInput): Report {
 
   const clearanceSource = clearanceData(input.files.brief);
   const clearance = clearanceSource.metrics;
+  const clearanceSelfTarget = clearanceSource.detailRows.reduce((total, row) => total + (row.selfTarget || 0), 0);
+  const clearanceSelfCollected = clearanceSource.detailRows.reduce((total, row) => total + (row.selfCollected || 0), 0);
+  const clearanceExternalTarget = clearanceSource.detailRows.reduce((total, row) => total + (row.externalTarget || 0), 0);
+  const clearanceExternalCollected = clearanceSource.detailRows.reduce((total, row) => total + (row.externalCollected || 0), 0);
+  const clearanceSelfRate = clearanceSelfTarget ? (clearanceSelfCollected / clearanceSelfTarget) * 100 : null;
+  const clearanceExternalRate = clearanceExternalTarget ? (clearanceExternalCollected / clearanceExternalTarget) * 100 : null;
   pages.push(
     makePage({
       id: "clearance",
       order: 5,
       title: `${input.year}年${input.month}月运营回顾`,
       subtitle: "清欠专项活动",
-      chartTitle: "基础指标完成率",
+      chartTitle: "自建与外拓清欠完成情况",
       kind: "clearance",
       metrics: [
-        metric("整体完成率", fmtPct(avg(clearance, "current")), "blue"),
-        metric("自建回款", `${Math.round(sum(clearance, "amount"))}万`, "blue"),
-        metric("外拓完成率", fmtPct(avg(clearance, "secondary")), "blue")
+        metric("自建完成率", fmtPct(clearanceSelfRate), "blue"),
+        metric("自建实收", fmtAmount(clearanceSelfCollected), "blue"),
+        metric("外拓完成率", fmtPct(clearanceExternalRate), "blue")
       ],
       keyCompanies: [
-        key("完成率最高", topBy(clearance, (row) => row.current), fmtPct(topBy(clearance, (row) => row.current)?.current), "blue"),
-        key("完成率最低", bottomBy(clearance, (row) => row.current), fmtPct(bottomBy(clearance, (row) => row.current)?.current), "red"),
+        key("自建最高", topBy(clearance, (row) => row.current), fmtPct(topBy(clearance, (row) => row.current)?.current), "blue"),
+        key("自建最低", bottomBy(clearance, (row) => row.current), fmtPct(bottomBy(clearance, (row) => row.current)?.current), "red"),
         key("外拓最高", topBy(clearance, (row) => row.secondary), fmtPct(topBy(clearance, (row) => row.secondary)?.secondary), "green")
       ],
       companies: clearance,

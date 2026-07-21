@@ -159,4 +159,16 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 3. Page 03 contains all 13 companies and its source trace points to `历欠-账龄 A47:AJ67` for June.
 4. May and June both build without validation errors; missing combined and split sources now block export rather than falling back to the unrelated `整体` table.
 
+## Clearance self-built and external separation
+
+- Source: `基础指标 A1:I34`; self-built values use columns B-E and external values use columns F-I.
+- Layout: page 05 now uses two independent columns. Each column presents its own base target, collected amount, weighted completion rate, and company detail table.
+
+### Verification
+
+1. Self-built totals reconcile to a 10,001万 base target, 3,600万 collected, and 36.0% completion rate.
+2. External totals reconcile to a 3,486万 base target, 923万 collected, and 26.5% completion rate.
+3. Both tables contain all 13 companies and sort independently by completion rate, with no duplicated completion-rate columns.
+4. Browser inspection at the desktop preview confirmed the paired headers, KPI bands, company rows, rate bars, conclusions, and footer fit inside the 16:9 slide without overlap.
+
 final result: passed
