@@ -147,4 +147,16 @@ conclusion block, and footer keep the same proportions and vertical rhythm.
 3. Page 01 contains all 13 companies and its source trace points to `当期-费项 A47:AG67`.
 4. May and June both build without validation errors; a missing combined source now blocks export instead of reverting to the unrelated `整体` table.
 
+## Arrears overview combined-source correction
+
+- Primary June source: `历欠-账龄 A47:AJ67`, the `历欠收费简报-合计` block combining self-built and external projects.
+- Historical compatibility: May has no cached combined block, so the platform combines `A1:AJ43` self-built and external receivable/paid totals before deriving rates.
+
+### Verification
+
+1. June group arrears fee rate is 25.3%, year-over-year change is -2.1%, and collected amount is 7,665万.
+2. June company reconciliation includes Beijing 15.4% / -5.3%, Beicheng 26.5% / +2.1%, and Ningbo 27.5% / -1.9%.
+3. Page 03 contains all 13 companies and its source trace points to `历欠-账龄 A47:AJ67` for June.
+4. May and June both build without validation errors; missing combined and split sources now block export rather than falling back to the unrelated `整体` table.
+
 final result: passed

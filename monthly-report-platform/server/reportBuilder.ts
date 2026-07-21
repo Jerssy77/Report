@@ -396,6 +396,18 @@ function combinedProjectTotalCompanies(filePath: string | undefined, sheetName: 
   };
 }
 
+function combinedProjectSourceRange(
+  filePath: string | undefined,
+  sheetName: string,
+  combinedRange: string,
+  fallbackRange: string
+) {
+  const hasCachedCombined = workbookRows(filePath, sheetName).some((row) =>
+    str(row[0]).includes("收费简报-合计")
+  );
+  return hasCachedCombined ? combinedRange : fallbackRange;
+}
+
 function clearanceCompanies(filePath?: string) {
   const rows = workbookRows(filePath, "基础指标").slice(2);
   return sortCompanies(
@@ -892,7 +904,7 @@ export function buildReport(input: BuildInput): Report {
   }
   const targets = targetsFromAnalysis(input.files.analysis);
   const current = combinedProjectTotalCompanies(input.files.brief, "当期-费项");
-  const arrears = overallCompanies(input.files.brief, "arrears");
+  const arrears = combinedProjectTotalCompanies(input.files.brief, "历欠-账龄");
   const currentTargetAverage =
     current.companies.reduce((sum, row) => sum + (targets.get(row.company) || 0), 0) /
     Math.max(current.companies.filter((row) => targets.has(row.company)).length, 1);
@@ -959,7 +971,15 @@ export function buildReport(input: BuildInput): Report {
       sourceIds: sourceForPage("current-overview")
     })
   );
-  sources.push(source("src-current-overview", "current-overview", "当期收费率", "brief", input.files.brief, "当期-费项", "A47:AG67"));
+  sources.push(source(
+    "src-current-overview",
+    "current-overview",
+    "当期收费率",
+    "brief",
+    input.files.brief,
+    "当期-费项",
+    combinedProjectSourceRange(input.files.brief, "当期-费项", "A47:AG67", "A1:AG43")
+  ));
 
   const currentSplit = projectTotalCompanies(input.files.brief, "当期-费项");
   const currentSplitLeft = currentSplit.selfBuilt.companies;
@@ -998,6 +1018,14 @@ export function buildReport(input: BuildInput): Report {
   );
   sources.push(source("src-current-split", "current-split", "当期收费率拆分", "brief", input.files.brief, "当期-费项", "A1:AG44"));
 
+  if (!arrears.companies.length || !arrears.summary) {
+    validation.push({
+      id: "invalid-arrears-combined-totals",
+      severity: "error",
+      pageId: "arrears-overview",
+      message: "历欠收费率缺少自建+外拓合计数据，请检查“历欠-账龄”工作表中的“历欠收费简报-合计”区块。"
+    });
+  }
   const arrearsMax = topBy(arrears.companies, (row) => row.current);
   const arrearsMin = bottomBy(arrears.companies, (row) => row.current);
   const arrearsImprove = topBy(arrears.companies, (row) => row.delta);
@@ -1023,7 +1051,15 @@ export function buildReport(input: BuildInput): Report {
       sourceIds: sourceForPage("arrears-overview")
     })
   );
-  sources.push(source("src-arrears-overview", "arrears-overview", "历欠收费率", "brief", input.files.brief, "整体", "J6:Q35"));
+  sources.push(source(
+    "src-arrears-overview",
+    "arrears-overview",
+    "历欠收费率",
+    "brief",
+    input.files.brief,
+    "历欠-账龄",
+    combinedProjectSourceRange(input.files.brief, "历欠-账龄", "A47:AJ67", "A1:AJ43")
+  ));
 
   const arrearsSplit = projectTotalCompanies(input.files.brief, "历欠-账龄");
   const arrearsSplitLeft = arrearsSplit.selfBuilt.companies;
