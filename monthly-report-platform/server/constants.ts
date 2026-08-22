@@ -6,7 +6,6 @@ export const DEV_FRONTEND_ORIGIN = process.env.APP_ORIGIN || "http://127.0.0.1:5
 export const APP_ROOT = process.cwd();
 export const DATA_ROOT = path.join(APP_ROOT, "data");
 export const REPORTS_ROOT = path.join(DATA_ROOT, "reports");
-export const TEMPLATE_ROOT = path.join(DATA_ROOT, "templates");
 export const SOURCE_ROOT = path.resolve(APP_ROOT, "..");
 
 export const STANDARD_COMPANY_ORDER = [
@@ -22,8 +21,17 @@ export const STANDARD_COMPANY_ORDER = [
   "宁波",
   "腾冲",
   "版纳",
-  "阜阳",
-  "广州"
+  "阜阳"
 ];
 
 export const SUMMARY_NAMES = new Set(["小计", "合计", "集团", "总计"]);
+
+export const EXCLUDED_COMPANY_NAMES = new Set<string>([
+  "公司",
+  "说明",
+  "备注",
+  "数据来源",
+  "收入",
+  "全年预估收入",
+  "广州"
+]);

@@ -7,7 +7,7 @@ export function HeaderRibbon() {
 export function BrandLogo() {
   return (
     <div className="brand-logo" aria-label="世纪金源服务">
-      <img src="/brand-logo.png" alt="世纪金源服务" />
+      <img src={`${import.meta.env.BASE_URL || "/"}brand-logo.png`} alt="世纪金源服务" />
     </div>
   );
 }

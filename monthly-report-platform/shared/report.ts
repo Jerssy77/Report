@@ -5,11 +5,13 @@ export type PageId =
   | "arrears-split"
   | "clearance"
   | "space"
-  | "charging"
+  | "equipment-health"
+  | "energy-cost"
   | "repair"
-  | "complaints";
+  | "complaints"
+  | "efficiency";
 
-export type ReportFileKind = "analysis" | "brief" | "supplement";
+export type ReportFileKind = "analysis" | "brief" | "resident";
 
 export interface SourceTrace {
   id: string;
@@ -38,6 +40,7 @@ export interface CompanyMetric {
   delta?: number | null;
   amount?: number | null;
   secondary?: number | null;
+  completionRate?: number | null;
   category?: string;
 }
 
@@ -69,11 +72,62 @@ export interface SpaceResourceRow {
   remark?: string;
 }
 
+export interface EquipmentHealthRow {
+  company: string;
+  inspectionRate: number | null;
+  maintenanceRate: number | null;
+  onsiteFactor: number | null;
+  elevatorFaultRate?: number | null;
+  score: number | null;
+  weightedScore: number | null;
+}
+
+export interface EnergyCostRow {
+  company: string;
+  income: number | null;
+  cost: number | null;
+  waterCost25?: number | null;
+  waterCost26?: number | null;
+  electricityCost25?: number | null;
+  electricityCost26?: number | null;
+  totalCost25?: number | null;
+  totalCost26?: number | null;
+  costYoY?: number | null;
+  marginRate: number | null;
+  previousMarginRate: number | null;
+  delta: number | null;
+  adjustment?: string;
+  score: number | null;
+  weightedScore: number | null;
+}
+
+export interface SatisfactionScoreRow {
+  company: string;
+  bins: number[];
+  total: number | null;
+  previousTotal?: number | null;
+  totalDelta?: number | null;
+  score: number | null;
+  lowShare: number | null;
+  highShare: number | null;
+  scoreDelta?: number | null;
+  residentHouseholds?: number | null;
+  complaintRate?: number | null;
+  complaintRateDelta?: number | null;
+}
+
 export interface PageDataBlocks {
   clearanceRows?: ClearanceRow[];
   spaceRows?: SpaceResourceRow[];
+  equipmentRows?: EquipmentHealthRow[];
+  energyRows?: EnergyCostRow[];
+  satisfactionRows?: SatisfactionScoreRow[];
+  complaintCompletionSummary?: number | null;
+  energyCostMode?: "cost-compare" | "margin";
   splitLeftTitle?: string;
   splitRightTitle?: string;
+  targetLine?: number;
+  targetLabel?: string;
 }
 
 export interface SummaryMetric {
@@ -114,16 +168,20 @@ export interface ReportPage {
     | "split-two-charts"
     | "clearance-table"
     | "space-progress"
-    | "charging-dashboard"
+    | "equipment-health"
+    | "energy-cost"
     | "repair-dashboard"
-    | "complaints-dashboard";
+    | "complaints-dashboard"
+    | "efficiency-dashboard";
   kind:
     | "bar-compare"
     | "split-bars"
     | "clearance"
     | "space"
+    | "score-table"
     | "quadrant"
-    | "dual-table";
+    | "dual-table"
+    | "efficiency";
   metrics: SummaryMetric[];
   keyCompanies: KeyCompany[];
   companies: CompanyMetric[];
@@ -172,9 +230,11 @@ export const PPT_LAYOUT_MAP: Record<PageId, Pick<ReportPage, "templateSlide" | "
   "arrears-split": { templateSlide: 4, layout: "split-two-charts", role: "历欠账龄拆分" },
   clearance: { templateSlide: 5, layout: "clearance-table", role: "清欠专项活动" },
   space: { templateSlide: 6, layout: "space-progress", role: "空间资源年度/季度进度" },
-  charging: { templateSlide: 7, layout: "charging-dashboard", role: "充电桩经营分析" },
-  repair: { templateSlide: 8, layout: "repair-dashboard", role: "入户维修满意度" },
-  complaints: { templateSlide: 9, layout: "complaints-dashboard", role: "投诉管理" }
+  "equipment-health": { templateSlide: 7, layout: "equipment-health", role: "设施设备健康度" },
+  "energy-cost": { templateSlide: 8, layout: "energy-cost", role: "自用能耗成本管控" },
+  repair: { templateSlide: 9, layout: "repair-dashboard", role: "入户维修满意度" },
+  complaints: { templateSlide: 10, layout: "complaints-dashboard", role: "投诉管理" },
+  efficiency: { templateSlide: 11, layout: "efficiency-dashboard", role: "效率管理" }
 };
 
 export const PAGE_ORDER: Array<{ id: PageId; title: string; subtitle: string }> = [
@@ -184,7 +244,9 @@ export const PAGE_ORDER: Array<{ id: PageId; title: string; subtitle: string }> 
   { id: "arrears-split", title: "历欠收费率拆分", subtitle: "历欠收费率" },
   { id: "clearance", title: "清欠专项活动", subtitle: "清欠专项活动" },
   { id: "space", title: "空间资源", subtitle: "空间资源" },
-  { id: "charging", title: "充电桩", subtitle: "充电桩" },
+  { id: "equipment-health", title: "设施设备健康度", subtitle: "设施设备健康度" },
+  { id: "energy-cost", title: "自用能耗成本管控", subtitle: "自用能耗成本管控" },
   { id: "repair", title: "入户维修满意度", subtitle: "入户维修满意度" },
-  { id: "complaints", title: "投诉管理", subtitle: "投诉管理" }
+  { id: "complaints", title: "投诉管理", subtitle: "投诉管理" },
+  { id: "efficiency", title: "效率管理", subtitle: "效率管理" }
 ];

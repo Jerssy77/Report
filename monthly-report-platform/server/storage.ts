@@ -3,6 +3,27 @@ import path from "node:path";
 import type { Report, ReportListItem } from "../shared/report.js";
 import { REPORTS_ROOT } from "./constants.js";
 
+const REMOVED_PAGE_IDS = new Set(["charging"]);
+const REMOVED_VALIDATION_IDS = new Set(["missing-supplement", "empty-charging"]);
+
+function normalizeReport(report: Report): Report {
+  const pages = report.pages
+    .filter((page) => !REMOVED_PAGE_IDS.has(String(page.id)))
+    .map((page, index) => ({ ...page, order: index + 1 }));
+  const copy = Object.fromEntries(
+    Object.entries(report.copy || {}).filter(([pageId]) => !REMOVED_PAGE_IDS.has(pageId))
+  ) as Report["copy"];
+  return {
+    ...report,
+    pages,
+    copy,
+    validation: report.validation.filter(
+      (issue) => !REMOVED_VALIDATION_IDS.has(issue.id) && !REMOVED_PAGE_IDS.has(String(issue.pageId || ""))
+    ),
+    sources: report.sources.filter((item) => !REMOVED_PAGE_IDS.has(String(item.pageId || "")))
+  };
+}
+
 export function reportDir(period: string) {
   return path.join(REPORTS_ROOT, period);
 }
@@ -27,7 +48,7 @@ export async function ensureReportFolders(period: string) {
 export async function readReport(period: string): Promise<Report | null> {
   try {
     const raw = await fs.readFile(reportJsonPath(period), "utf8");
-    return JSON.parse(raw) as Report;
+    return normalizeReport(JSON.parse(raw) as Report);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
